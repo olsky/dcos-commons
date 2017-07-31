@@ -41,9 +41,9 @@ public class PortEvaluationStage implements OfferEvaluationStage {
 
     @Override
     public EvaluationOutcome evaluate(MesosResourcePool mesosResourcePool, PodInfoBuilder podInfoBuilder) {
-        long requestedPort = portSpec.getValue().getRanges().getRange(0).getBegin();
-        long assignedPort = requestedPort;
-        if (requestedPort == 0) {
+        long assignedPort = getPort();
+        // Get the port from the pod info builder based on name or whatever, since it knows hwhether that port is taken or not
+        if (assignedPort == 0) {
             // If this is from an existing pod with the dynamic port already assigned and reserved, just keep it.
             Optional<Long> priorTaskPort = podInfoBuilder.getPriorPortForTask(getTaskName().get(), portSpec);
             if (priorTaskPort.isPresent()) {

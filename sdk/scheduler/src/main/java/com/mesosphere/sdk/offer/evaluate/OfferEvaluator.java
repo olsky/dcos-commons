@@ -289,8 +289,7 @@ public class OfferEvaluator {
 
         for (VolumeSpec volumeSpec : podInstanceRequirement.getPodInstance().getPod().getVolumes()) {
             evaluationStages.add(
-                    new VolumeEvaluationStage(
-                            volumeSpec, null, Optional.empty(), Optional.empty(), useDefaultExecutor));
+                    new VolumeEvaluationStage(volumeSpec, null, Optional.empty(), Optional.empty()));
         }
 
         String preReservedRole = null;
@@ -320,8 +319,7 @@ public class OfferEvaluator {
 
             for (VolumeSpec volumeSpec : entry.getValue().getVolumes()) {
                 evaluationStages.add(
-                        new VolumeEvaluationStage(
-                                volumeSpec, taskName, Optional.empty(), Optional.empty(), useDefaultExecutor));
+                        new VolumeEvaluationStage(volumeSpec, taskName, Optional.empty(), Optional.empty()));
             }
 
             if (shouldAddExecutorResources) {

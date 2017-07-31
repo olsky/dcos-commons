@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -192,6 +193,30 @@ public class ConfigStore<T extends Configuration> implements ConfigTargetStore {
             throw new ConfigStoreException(Reason.SERIALIZATION_ERROR, String.format(
                     "Failed to parse '%s' as a UUID", uuidStr));
         }
+    }
+
+    @Override
+    public Optional<T> fetchTargetConfig() {
+        UUID targetUuid;
+
+        try {
+            targetUuid = getTargetConfig();
+        } catch (ConfigStoreException e) {
+            logger.debug("No target configuration ID was set. First launch?");
+            targetUuid = null;
+        }
+
+        if (targetUuid == null) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(fetch(targetUuid));
+        } catch (ConfigStoreException e) {
+            logger.debug(e.getMessage());
+        }
+
+        return Optional.empty();
     }
 
     public void close() {

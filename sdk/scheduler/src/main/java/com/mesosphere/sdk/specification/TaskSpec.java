@@ -2,6 +2,7 @@ package com.mesosphere.sdk.specification;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.mesosphere.sdk.offer.evaluate.SpecVisitor;
 
 import java.util.Collection;
 import java.util.Optional;
@@ -47,5 +48,17 @@ public interface TaskSpec {
 
     static String getInstanceName(PodInstance podInstance, String taskName) {
         return podInstance.getName() + "-" + taskName;
+    }
+
+    default void accept(SpecVisitor specVisitor) {
+        specVisitor.visit(this);
+        for (ResourceSpec resourceSpec : getResourceSet().getResources()) {
+            resourceSpec.accept(specVisitor);
+        }
+
+        for (VolumeSpec volumeSpec : getResourceSet().getVolumes()) {
+            volumeSpec.accept(specVisitor);
+        }
+        specVisitor.finalize(this);
     }
 }

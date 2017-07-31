@@ -103,6 +103,10 @@ public class PodInstanceRequirement {
         return HashCodeBuilder.reflectionHashCode(this);
     }
 
+    public boolean shouldLaunch(String taskName) {
+        return getTasksToLaunch().contains(taskName);
+    }
+
     /**
      * {@link PodInstanceRequirement} builder static inner class.
      */
