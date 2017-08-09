@@ -18,7 +18,7 @@ RUN add-apt-repository -y ppa:longsleep/golang-backports && apt-get update && ap
 # AWS CLI for uploading build artifacts
 RUN pip install awscli
 # Install python test dependencies
-RUN pip3 install requests==2.10.0 dcoscli==0.4.17 dcos==0.4.17 dcos-shakedown==1.4.4 teamcity-messages git+https://github.com/dcos/dcos-test-utils@2588a9e79f7eb1b81f37689298b8c83c1f924946
+RUN pip3 install dcoscli==0.5.3 dcos==0.5.3 dcos-shakedown==1.4.5 teamcity-messages git+https://github.com/dcos/dcos-test-utils@2588a9e79f7eb1b81f37689298b8c83c1f924946
 # Install dcos-launch to create clusters for integration testing
 RUN apt-get install -y python3-venv
 RUN wget https://downloads.dcos.io/dcos-launch/bin/linux/dcos-launch -O /usr/bin/dcos-launch
