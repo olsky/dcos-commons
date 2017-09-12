@@ -31,3 +31,22 @@ ENV GOPATH=/go-tmp
 # Add the default SSH key
 COPY aws_default_ssh_key /root/.ssh/id_rsa
 RUN chmod 600 /root/.ssh/id_rsa
+
+# Spark dependencies
+# Build R
+RUN apt-get install -y \
+    gfortran \
+    libbz2-dev \
+    liblzma-dev \
+    libpcre++-dev \
+    libcurl4-openssl-dev
+ENV R_VERSION=3.4.0
+ENV R_TGZ=R-${R_VERSION}.tar.gz
+RUN export PATH=/root/packages/bin:$PATH \
+  && cd /tmp \
+  && wget https://cran.r-project.org/src/base/R-3/${R_TGZ} \
+  && tar xf ${R_TGZ} \
+  && cd R-${R_VERSION}/ \
+  && ./configure --with-readline=no --with-x=no CPPFLAGS="-I/root/packages/include" LDFLAGS="-L/root/packages/lib" \
+  && make \
+  && make install
