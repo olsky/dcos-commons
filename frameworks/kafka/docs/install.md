@@ -19,20 +19,20 @@ Kafka is available in the Universe and can be installed by using either the web 
 To start a basic test cluster with three brokers, run the following command on the DC/OS CLI. Enterprise DC/OS users must follow additional instructions. [More information about installing Kafka on Enterprise DC/OS](#install-enterprise).
 
 ```bash
-$ dcos package install beta-kafka
+$ dcos package install $package-name
 ```
 
 This command creates a new Kafka cluster with the default name `kafka`. Two clusters cannot share the same name, so installing additional clusters beyond the default cluster requires [customizing the `name` at install time][4] for each additional instance.
 
-All `dcos beta-kafka` CLI commands have a `--name` argument allowing the user to specify which Kafka instance to query. If you do not specify a service name, the CLI assumes the default value, `kafka`. The default value for `--name` can be customized via the DC/OS CLI configuration:
+All `dcos $cli-package-name` CLI commands have a `--name` argument allowing the user to specify which Kafka instance to query. If you do not specify a service name, the CLI assumes the default value, `kafka`. The default value for `--name` can be customized via the DC/OS CLI configuration:
 
 ```bash
-$ dcos beta-kafka --name kafka-dev <cmd>
+$ dcos $cli-package-name --name kafka-dev <cmd>
 
 **Note:** Alternatively, you can [install Kafka from the DC/OS web interface](https://docs.mesosphere.com/1.9/deploying-services/install/). If you install Kafka from the web interface, you must install the Kafka DC/OS CLI subcommands separately. From the DC/OS CLI, enter:
 
 ```bash
-dcos package install beta-kafka --cli
+dcos package install $package-name --cli
 ```
 
 # Minimal Installation
@@ -104,7 +104,7 @@ $ cat kafka1.json
   }
 }
 
-$ dcos package install beta-kafka --options=kafka1.json
+$ dcos package install $package-name --options=kafka1.json
 ```
 <!-- THIS BLOCK DUPLICATES THE OPERATIONS GUIDE -->
 

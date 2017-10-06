@@ -20,12 +20,12 @@ The default DC/OS Apache Cassandra installation provides reasonable defaults for
 To start a basic test cluster, run the following command on the DC/OS CLI. Enterprise DC/OS users must follow additional instructions. [More information about installing DC/OS Apache Cassandra on Enterprise DC/OS](https://docs.mesosphere.com/1.9/security/service-auth/custom-service-auth/).
 
 ```shell
-dcos package install beta-cassandra
+$package-name beta-cassandra
 ```
-You can specify a custom configuration in an `options.json` file and pass it to `dcos package install` using the `--options` parameter.
+You can specify a custom configuration in an `options.json` file and pass it to `$package-name` using the `--options` parameter.
 
 ```
-$ dcos package install beta-cassandra --options=<options>.json
+$ $package-name beta-cassandra --options=<options>.json
 ```
 
 It is recommended that this custom configuration is stored in source control.
@@ -36,7 +36,7 @@ For more information about building the `options.json` file, see the [DC/OS docu
 
 You can [install DC/OS Apache Cassandra from the DC/OS web interface](https://docs.mesosphere.com/1.9/usage/managing-services/install/). If you install DC/OS Apache Cassandra from the web interface, you must install the DC/OS Apache Cassandra CLI subcommands separately. From the DC/OS CLI, enter:
 ```bash
-dcos package install beta-cassandra --cli
+$package-name beta-cassandra --cli
 ```
 Choose `ADVANCED INSTALLATION` to perform a custom installation.
 
@@ -80,7 +80,7 @@ To replicate data across data centers, Apache Cassandra requires that you config
 
 Launch the first cluster with the default configuration:
 ```
-dcos package install beta-cassandra
+$package-name beta-cassandra
 ```
 
 Create an `options.json` file for the second cluster that specifies a different service name and data center name:
@@ -95,7 +95,7 @@ Create an `options.json` file for the second cluster that specifies a different 
 
 Launch the second cluster with these custom options:
 ```
-dcos package install beta-cassandra --options=<options>.json
+$package-name beta-cassandra --options=<options>.json
 ```
 
 Get the list of seed node addresses for the first cluster from the scheduler HTTP API:

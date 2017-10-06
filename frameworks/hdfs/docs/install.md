@@ -26,7 +26,7 @@ The default installation may not be sufficient for a production deployment, but 
 Once you have installed Beta-HDFS, install the CLI.
 
 ```bash
-$ dcos package install beta-hdfs --cli
+$ dcos package install $package-name --cli
 ```
 
 # Service Settings
@@ -52,7 +52,7 @@ Sample JSON options file named `sample-hdfs.json`:
 The command below creates a cluster using `sample-hdfs.json`:
 
 ```bash
-$ dcos package install --options=sample-hdfs.json hdfs
+$ dcos package install $package-name --options=sample-hdfs.json
 ```
 
 **Recommendation:** Store your custom configuration in source control.
@@ -78,7 +78,7 @@ $ cat hdfs1.json
    }
 }
 
-$ dcos package install beta-hdfs --options=hdfs1.json
+$ dcos package install $package-name --options=hdfs1.json
 ```
 
 Use the `--name` argument after install time to specify which HDFS instance to query. All `dcos hdfs` CLI commands accept the `--name` argument. If you do not specify a service name, the CLI assumes the default value, `hdfs`.
@@ -300,11 +300,11 @@ Enterprise DC/OS 1.10 introduces a convenient command line option that allows fo
 + Service with a version greater than 2.0.0-x.
 + [The DC/OS CLI](https://docs.mesosphere.com/latest/cli/install/) installed and available.
 + The service's subcommand available and installed on your local machine.
-  + You can install just the subcommand CLI by running `dcos package install --cli beta-hdfs`.
+  + You can install just the subcommand CLI by running `dcos package install $package-name --cli`.
   + If you are running an older version of the subcommand CLI that doesn't have the `update` command, uninstall and reinstall your CLI.
     ```bash
-    dcos package uninstall --cli beta-hdfs
-    dcos package install --cli beta-hdfs
+    dcos package uninstall $package-name --cli
+    dcos package install $package-name --cli
     ```
 
 ### Preparing configuration
@@ -312,7 +312,7 @@ Enterprise DC/OS 1.10 introduces a convenient command line option that allows fo
 If you installed this service with Enterprise DC/OS 1.10, you can fetch the full configuration of a service (including any default values that were applied during installation). For example:
 
 ```bash
-$ dcos beta-hdfs describe > options.json
+$ $cli-package-name describe > options.json
 ```
 
 Make any configuration changes to this `options.json` file.
@@ -366,7 +366,7 @@ $ less marathon.json.mustache
 Once you are ready to begin, initiate an update using the DC/OS CLI, passing in the updated `options.json` file:
 
 ```bash
-$ dcos beta-hdfs update start --options=options.json
+$ $cli-package-name update start --options=options.json
 ```
 
 You will receive an acknowledgement message and the DC/OS package manager will restart the Scheduler in Marathon.

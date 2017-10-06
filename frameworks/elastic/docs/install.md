@@ -9,7 +9,7 @@ enterprise: 'no'
 To start a basic cluster with three master nodes, two data nodes, and one coordinator node, run the following command on the DC/OS CLI:
 
 ```bash
-$ dcos package install beta-elastic
+$ $ dcos package install $package-name
 ```
 
 This command creates a new Elasticsearch cluster with the default name `elastic`. Two clusters cannot share the same name, so installing additional clusters beyond the default cluster requires customizing the `name` at install time for each additional instance.
@@ -17,7 +17,7 @@ This command creates a new Elasticsearch cluster with the default name `elastic`
 **Note:** You can also install Elastic from the **Universe** > **Packages** tab of the DC/OS web interface. If you install Elastic from the web interface, you must install the Elastic DC/OS CLI subcommands separately. From the DC/OS CLI, enter:
 
 ```bash
-dcos package install beta-elastic --cli
+$ dcos package install $package-name --cli
 ```
 
 # Custom Installation
@@ -42,7 +42,7 @@ You can customize the Elastic cluster in a variety of ways by specifying a JSON 
 The command below creates a cluster using a `options.json` file:
 
 ```bash
-$ dcos package install beta-elastic --options=options.json
+$ $ dcos package install $package-name --options=options.json
 ```
 
 **Recommendation:** Store your custom configuration in source control.
@@ -63,7 +63,7 @@ Sample JSON options file named `another-cluster.json`:
 The command below creates a cluster using `another-cluster.json`:
 
 ```bash
-$ dcos package install beta-elastic --options=another-cluster.json
+$ $ dcos package install $package-name --options=another-cluster.json
 ```
 
 See the Configuring section for a list of fields that can be customized via an options JSON file when the Elastic cluster is created.
@@ -81,7 +81,7 @@ Steps:
    Select the group or user you created. Select **ADD PERMISSION** and then toggle to **INSERT PERMISSION STRING**. Add each of the following permissions to your user or group, and then click **ADD PERMISSIONS**.
 
    ```
-   dcos:adminrouter:service:marathon full				
+   dcos:adminrouter:service:marathon full
    dcos:service:marathon:marathon:services:/testing full
    dcos:adminrouter:ops:mesos full
    dcos:adminrouter:ops:slave full
@@ -187,7 +187,7 @@ Enterprise DC/OS 1.10 introduces a convenient command line option that allows fo
 If you installed this service with Enterprise DC/OS 1.10, you can fetch the full configuration of a service (including any default values that were applied during installation). For example:
 
 ```bash
-$ dcos beta-elastic describe > options.json
+$ $cli-package-name describe > options.json
 ```
 
 Make any configuration changes to this `options.json` file.
@@ -241,7 +241,7 @@ $ less marathon.json.mustache
 Once you are ready to begin, initiate an update using the DC/OS CLI, passing in the updated `options.json` file:
 
 ```bash
-$ dcos beta-elastic update start --options=options.json
+$ $cli-package-name update start --options=options.json
 ```
 
 You will receive an acknowledgement message and the DC/OS package manager will restart the Scheduler in Marathon.
@@ -267,7 +267,7 @@ These are the general steps to follow:
 - Service name: This needs to be unique for each instance of the service that is running. It is also used as your cluster name.
 - Service user: This must be a non-root user that already exists on each agent. The default user is `nobody`.
 - X-Pack is not installed by default, but you can enable it. X-Pack comes with a 30-day trial license.
-- Health check credentials: If you have X-Pack enabled, the health check will use these credentials for authorization. We recommend you create a specific Elastic user/password for this with minimal capabilities rather than using the default superuser `elastic`.  
+- Health check credentials: If you have X-Pack enabled, the health check will use these credentials for authorization. We recommend you create a specific Elastic user/password for this with minimal capabilities rather than using the default superuser `elastic`.
 - Plugins: You can specify other plugins via a comma-separated list of plugin names (e.g., “analysis-icu”) or plugin URIs.
 - CPU/RAM/Disk/Heap: These will be specific to your DC/OS cluster and your Elasticsearch use cases. Please refer to Elastic’s guidelines for configuration.
 - Node counts: At least 1 data node is required for the cluster to operate at all. You do not need to use a coordinator node. Learn about Elasticsearch node types [here](https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-node.html). There is no maximum for node counts.

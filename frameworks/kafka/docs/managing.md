@@ -29,8 +29,8 @@ Enterprise DC/OS 1.10 introduces a convenient command line option that allows fo
   + You can install just the subcommand CLI by running `dcos package install --cli beta-kafka`.
   + If you are running an older version of the subcommand CLI that doesn't have the `update` command, uninstall and reinstall your CLI.
     ```bash
-    $ dcos package uninstall --cli beta-kafka
-    $ dcos package install --cli beta-kafka
+    $ dcos package uninstall $package-name --cli
+    $ dcos package install $package-name --cli
     ```
 
 ### Preparing configuration
@@ -38,7 +38,7 @@ Enterprise DC/OS 1.10 introduces a convenient command line option that allows fo
 If you installed this service with Enterprise DC/OS 1.10, you can fetch the full configuration of a service (including any default values that were applied during installation). For example:
 
 ```bash
-$ dcos beta-kafka describe > options.json
+$ dcos $cli-package-name describe > options.json
 ```
 
 Make any configuration changes to this `options.json` file.
@@ -92,7 +92,7 @@ $ less marathon.json.mustache
 Once you are ready to begin, initiate an update using the DC/OS CLI, passing in the updated `options.json` file:
 
 ```bash
-$ dcos beta-kafka update start --options=options.json
+$ dcos $cli-package-name update start --options=options.json
 ```
 
 You will receive an acknowledgement message and the DC/OS package manager will restart the Scheduler in Marathon.
@@ -136,7 +136,7 @@ To see a full listing of available options, run `dcos package describe --config 
 1.  Install the latest version of Kafka:
 
 ```bash
-$ dcos package install beta-kafka -—options=options.json
+$ dcos package install $package-name -—options=options.json
 ```
 
 # Graceful Shutdown
@@ -165,7 +165,7 @@ Create an options file `kafka-options.json` with the following content:
 Issue the following command:
 
 ```bash
-$ dcos beta-kafka --name=/kafka update --options=kafka-options.json
+$ dcos $cli-package-name --name=/kafka update --options=kafka-options.json
 ```
 
 ## Restart a Broker with Grace
@@ -188,25 +188,25 @@ The `update package-versions` command allows you to view the versions of a servi
 
 For example, run:
 ```bash
-$ dcos beta-kafka update package-versions
+$ dcos $cli-package-name update package-versions
 ```
 
 ## Upgrading or downgrading a service
 
 1. Before updating the service itself, update its CLI subcommand to the new version:
    ```bash
-   $ dcos package uninstall --cli beta-kafka
-   $ dcos package install --cli beta-kafka --package-version="1.1.6-5.0.7"
+   $ dcos package uninstall $package-name --cli
+   $ dcos package install $package-name --cli --package-version="1.1.6-5.0.7"
    ```
 1. Once the CLI subcommand has been updated, call the update start command, passing in the version. For example, to update DC/OS Kafka Service to version `1.1.6-5.0.7`:
    ```bash
-   $ dcos beta-kafka update start --package-version="1.1.6-5.0.7"
+   $ dcos $cli-package-name update start --package-version="1.1.6-5.0.7"
    ```
 
 If you are missing mandatory configuration parameters, the `update` command will return an error. To supply missing values, you can also provide an `options.json` file (see [Updating configuration](#updating-configuration)):
 
 ```bash
-$ dcos beta-kafka update start --options=options.json --package-version="1.1.6-5.0.7"
+$ dcos $cli-package-name update start --options=options.json --package-version="1.1.6-5.0.7"
 ```
 
 See [Advanced update actions](#advanced-update-actions) for commands you can use to inspect and manipulate an update after it has started.
@@ -226,7 +226,7 @@ Once the Scheduler has been restarted, it will begin a new deployment plan as in
 You can query the status of the update as follows:
 
 ```bash
-$ dcos beta-kafka update status
+$ dcos $cli-package-name update status
 ```
 
 If the Scheduler is still restarting, DC/OS will not be able to route to it and this command will return an error message. Wait a short while and try again. You can also go to the Services tab of the DC/OS GUI to check the status of the restart.
@@ -236,7 +236,7 @@ If the Scheduler is still restarting, DC/OS will not be able to route to it and 
 To pause an ongoing update, issue a pause command:
 
 ```bash
-$ dcos beta-kafka update pause
+$ dcos $cli-package-name update pause
 ```
 
 You will receive an error message if the plan has already completed or has been paused. Once completed, the plan will enter the `WAITING` state.
@@ -246,7 +246,7 @@ You will receive an error message if the plan has already completed or has been 
 If a plan is in a `WAITING` state, as a result of being paused or reaching a breakpoint that requires manual operator verification, you can use the `resume` command to continue the plan:
 
 ```bash
-$ dcos beta-kafka update resume
+$ dcos $cli-package-name update resume
 ```
 
 You will receive an error message if you attempt to `resume` a plan that is already in progress or has already completed.
@@ -256,7 +256,7 @@ You will receive an error message if you attempt to `resume` a plan that is alre
 In order to manually "complete" a step (such that the Scheduler stops attempting to launch a task), you can issue a `force-complete` command. This will instruct to Scheduler to mark a specific step within a phase as complete. You need to specify both the phase and the step, for example:
 
 ```bash
-$ dcos beta-kafka update force-complete service-phase service-0:[node]
+$ dcos $cli-package-name update force-complete service-phase service-0:[node]
 ```
 
 ## Force Restart
@@ -265,17 +265,17 @@ Similar to force complete, you can also force a restart. This can either be done
 
 To restart the entire plan:
 ```bash
-$ dcos beta-kafka update force-restart
+$ dcos $cli-package-name update force-restart
 ```
 
 Or for all steps in a single phase:
 ```bash
-$ dcos beta-kafka update force-restart service-phase
+$ dcos $cli-package-name update force-restart service-phase
 ```
 
 Or for a specific step within a specific phase:
 ```bash
-$ dcos beta-kafka update force-restart service-phase service-0:[node]
+$ dcos $cli-package-name update force-restart service-phase service-0:[node]
 ```
 
 <!-- END DUPLICATE BLOCK -->
