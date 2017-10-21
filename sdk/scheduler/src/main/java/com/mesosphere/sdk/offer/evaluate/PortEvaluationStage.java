@@ -4,6 +4,7 @@ import com.google.protobuf.TextFormat;
 import com.mesosphere.sdk.dcos.DcosConstants;
 import com.mesosphere.sdk.offer.*;
 import com.mesosphere.sdk.offer.taskdata.*;
+import com.mesosphere.sdk.specification.DefaultPortSpec;
 import com.mesosphere.sdk.specification.PortSpec;
 import com.mesosphere.sdk.specification.ResourceSpec;
 import com.mesosphere.sdk.specification.TaskSpec;
@@ -193,7 +194,7 @@ public class PortEvaluationStage implements OfferEvaluationStage {
         // compile a list of those to check against the offered ports.
         for (TaskSpec task : podInfoBuilder.getPodInstance().getPod().getTasks()) {
             for (ResourceSpec resourceSpec : task.getResourceSet().getResources()) {
-                if (resourceSpec instanceof PortSpec) {
+                if (resourceSpec instanceof DefaultPortSpec) {
                     PortSpec portSpec = (PortSpec) resourceSpec;
                     if (portSpec.getPort() != 0) {
                         consumedPorts.add((int) portSpec.getPort());

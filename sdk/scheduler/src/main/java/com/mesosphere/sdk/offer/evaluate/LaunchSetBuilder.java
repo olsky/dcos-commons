@@ -17,7 +17,6 @@ public abstract class LaunchSetBuilder {
 
     // THe port preparer will call this shit inside
     public abstract long getUnassignedPort(Protos.Offer offer);
-    // TODO(mrb): find a place for this
     /*
 
         boolean isRunningExecutor = podInfoBuilder.getExecutorBuilder().isPresent() &&

@@ -161,7 +161,7 @@ class TaskResourceMapper {
         }
 
         for (ResourceSpec resourceSpec : resourceSpecs) {
-            if (!(resourceSpec instanceof PortSpec)) {
+            if (!(resourceSpec instanceof DefaultPortSpec)) {
                 continue;
             }
             PortSpec portSpec = (PortSpec) resourceSpec;
@@ -228,7 +228,7 @@ class TaskResourceMapper {
             Optional<String> persistenceId) {
         if (resourceSpec instanceof NamedVIPSpec) {
             return new NamedVIPEvaluationStage((NamedVIPSpec) resourceSpec, taskSpecName, resourceId);
-        } else if (resourceSpec instanceof PortSpec) {
+        } else if (resourceSpec instanceof DefaultPortSpec) {
             return new PortEvaluationStage((PortSpec) resourceSpec, taskSpecName, resourceId);
         } else if (resourceSpec instanceof VolumeSpec) {
             return new VolumeEvaluationStage(

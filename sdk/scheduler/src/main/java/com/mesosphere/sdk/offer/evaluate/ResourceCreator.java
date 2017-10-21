@@ -4,6 +4,9 @@ import com.mesosphere.sdk.offer.Constants;
 import com.mesosphere.sdk.specification.ResourceSpec;
 import org.apache.mesos.Protos;
 
+// TODO(mrb): Some sort of override layer to remove the role from the resource itself? That seems
+// A little brittle, like maybe this should be handled via composition...so many goddamn axes
+// to account for with this shit, ugh.
 public interface ResourceCreator {
 
     ResourceSpec getResourceSpec();
@@ -13,9 +16,7 @@ public interface ResourceCreator {
         Protos.Resource.Builder builder = Protos.Resource.newBuilder();
 
         Protos.Value resourceValue = resourceSpec.getValue();
-        builder.setName(resourceSpec.getName())
-                .setRole(Constants.ANY_ROLE)
-                .setType(resourceValue.getType());
+        builder.setName(resourceSpec.getName()).setType(resourceValue.getType());
 
         switch (resourceValue.getType()) {
             case SCALAR:

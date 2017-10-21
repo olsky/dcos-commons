@@ -15,7 +15,7 @@ import java.util.Collection;
 /**
  * This class represents a port mapped to a DC/OS named VIP.
  */
-public class NamedVIPSpec extends PortSpec {
+public class NamedVIPSpec extends DefaultPortSpec {
     @NotNull
     @Size(min = 1)
     private final String protocol;

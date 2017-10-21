@@ -13,7 +13,7 @@ import java.util.Optional;
  * TaskSpecification.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
-public interface ResourceSpec extends ResourceCreator {
+public interface ResourceSpec extends ResourceCreator, SpecVisitee {
 
     @JsonProperty("value")
     Protos.Value getValue();

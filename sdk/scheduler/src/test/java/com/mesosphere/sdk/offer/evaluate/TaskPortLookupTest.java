@@ -1,12 +1,12 @@
 package com.mesosphere.sdk.offer.evaluate;
 
+import com.mesosphere.sdk.specification.PortSpec;
 import org.apache.mesos.Protos;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.mesosphere.sdk.specification.PortSpec;
 import com.mesosphere.sdk.testutils.TaskTestUtils;
 
 import static org.junit.Assert.*;
@@ -23,7 +23,8 @@ public class TaskPortLookupTest {
             .clearDiscovery()
             .clearCommand()
             .build();
-    @Mock PortSpec mockPortSpec;
+    @Mock
+    PortSpec mockPortSpec;
 
     @Before
     public void initMocks() {

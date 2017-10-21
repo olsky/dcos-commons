@@ -52,7 +52,6 @@ public abstract class VolumePreparer extends ResourcePreparer implements Resourc
     @Override
     protected LaunchSetBuilder performExtraCleanup(
             LaunchSetBuilder launchSetBuilder, LaunchedPodEntity launchedPodEntity) {
-        // TODO(mrb): generate destroys
         return launchSetBuilder;
     }
 

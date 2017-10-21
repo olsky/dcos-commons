@@ -47,8 +47,8 @@ public class ExistingSpecVisitor extends OperationBuilder {
 
     @Override
     public void visit(ResourceSpec resourceSpec) {
-        Optional<ResourceSpec> existingResource = Optional.ofNullable(
-                existingResources.get(resourceName(resourceSpec)));
+        String resourceName = resourceName(resourceSpec);
+        Optional<ResourceSpec> existingResource = Optional.ofNullable(existingResources.get(resourceName));
 
         if (existingResource.isPresent()) {
             Protos.Value unusedResource = ValueUtils.subtract(
@@ -65,6 +65,8 @@ public class ExistingSpecVisitor extends OperationBuilder {
                 // Create RESERVE.
                 delegate.reserve(withValue(resourceSpec, extraResource));
             }
+
+            existingResources.remove(resourceName);
             // Build the merged resource spec, *with* reservation.
             delegate.visit(resourceSpec);
         } else {
@@ -78,7 +80,11 @@ public class ExistingSpecVisitor extends OperationBuilder {
 
     @Override
     public void visit(VolumeSpec volumeSpec) {
-        Optional<ResourceSpec> existingVolume = Optional.ofNullable(existingResources.get(resourceName(volumeSpec)));
+        String resourceName = resourceName(volumeSpec);
+        // Unfortunately, the type system can't do the work for us here, since we don't want to achieve polymorphism by
+        // attaching behavior to Specs. This is the safest place to do it and lets us override the reserve()/unreserve()
+        // methods in OperationBuilder rather than conducting volume handling separately from other resources.
+        Optional<VolumeSpec> existingVolume = Optional.ofNullable((VolumeSpec) existingResources.get(resourceName));
 
         if (existingVolume.isPresent()) {
             Protos.Value unusedResource = ValueUtils.subtract(
@@ -90,8 +96,10 @@ public class ExistingSpecVisitor extends OperationBuilder {
                 // Can't do!
             } else {
                 // Build reservation volume spec.
+                // TODO(mrb): is this wrong?
                 delegate.visit(volumeSpec);
             }
+            existingResources.remove(resourceName);
         } else {
             delegate.visit(volumeSpec);
         }
@@ -105,12 +113,28 @@ public class ExistingSpecVisitor extends OperationBuilder {
 
     @Override
     public void finalize(PodSpec podSpec) {
-
+        // Presumably won't need to unreserve executor resources the same way...?
     }
 
     @Override
     public void finalize(TaskSpec taskSpec) {
+        Optional<TaskSpec> existingTask = existingPodSpec.getTasks().stream()
+                .filter(t -> t.getName().equals(taskSpec.getName()))
+                .findAny();
 
+        if (existingTask.isPresent()) {
+            for (ResourceSpec r : existingTask.get().getResourceSet().getResources()) {
+                if (existingResources.containsKey(resourceName(r))) {
+                    unreserve(r);
+                }
+            }
+
+            for (VolumeSpec v : existingTask.get().getResourceSet().getVolumes()) {
+                if (existingResources.containsKey(resourceName(v))) {
+                    unreserve(v);
+                }
+            }
+        }
     }
 
     @Override

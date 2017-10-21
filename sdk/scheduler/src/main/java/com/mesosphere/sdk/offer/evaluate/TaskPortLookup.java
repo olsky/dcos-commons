@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+import com.mesosphere.sdk.specification.PortSpec;
 import org.apache.logging.log4j.util.Strings;
 import org.apache.mesos.Protos;
 import org.slf4j.Logger;
@@ -11,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 import com.mesosphere.sdk.offer.taskdata.EnvConstants;
 import com.mesosphere.sdk.offer.taskdata.EnvUtils;
-import com.mesosphere.sdk.specification.PortSpec;
 
 /**
  * Searches TaskInfos for evidence of prior port assignments. Used for preserving/reusing previous dynamic ports.
@@ -36,7 +36,7 @@ class TaskPortLookup {
     }
 
     /**
-     * Returns the last value used for the provided PortSpec. Mainly useful for dynamic ports whose value is determined
+     * Returns the last value used for the provided DefaultPortSpec. Mainly useful for dynamic ports whose value is determined
      * at time of launch.
      */
     Optional<Long> getPriorPort(PortSpec portSpec) {
@@ -48,9 +48,9 @@ class TaskPortLookup {
         // Fall back to searching the task environment.
         // Tasks launched in older SDK releases may omit the port names in the DiscoveryInfo.
         // TODO(nickbp): Remove this fallback after October 2017
-        // When the PortSpec lacks an explicit env name, fall back to trying the legacy "PORT_<PORT_NAME>" default
-        final String portEnvName = portSpec.getEnvKey() != null
-                ? portSpec.getEnvKey()
+        // When the DefaultPortSpec lacks an explicit env name, fall back to trying the legacy "PORT_<PORT_NAME>" default
+        final String portEnvName = portSpec.getEnvKey().isPresent()
+                ? portSpec.getEnvKey().get()
                 : EnvConstants.PORT_NAME_TASKENV_PREFIX + EnvUtils.toEnvName(portSpec.getPortName());
         try {
             return Optional.ofNullable(Long.parseLong(lastTaskEnvs.get(portEnvName)));

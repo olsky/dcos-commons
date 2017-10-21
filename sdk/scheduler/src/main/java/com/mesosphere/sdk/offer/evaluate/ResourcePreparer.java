@@ -8,7 +8,6 @@ public abstract class ResourcePreparer implements LaunchSetPreparer {
     public LaunchSetBuilder prepareResourceCleanup(
             LaunchSetBuilder launchSetBuilder, LaunchedPodEntity launchedPodEntity) {
         performExtraCleanup(launchSetBuilder, launchedPodEntity);
-        // TODO(mrb): generate unreserve operations
         return launchSetBuilder;
     }
 }

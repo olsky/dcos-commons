@@ -1,5 +1,6 @@
 package com.mesosphere.sdk.offer;
 
+import com.mesosphere.sdk.offer.evaluate.ReservationCreator;
 import org.apache.commons.lang3.builder.ReflectionToStringBuilder;
 import org.apache.mesos.Protos.Offer;
 import org.apache.mesos.Protos.Offer.Operation;
@@ -13,8 +14,8 @@ public class ReserveOfferRecommendation implements OfferRecommendation {
     private final Offer offer;
     private final Operation operation;
 
-    public ReserveOfferRecommendation(Offer offer, Resource resource) {
-        resource = getReservedResource(resource);
+    public ReserveOfferRecommendation(Offer offer, Resource.Builder resource, ReservationCreator reservationCreator) {
+        resource = getReservedResource(resource, reservationCreator);
         this.offer = offer;
         this.operation = Operation.newBuilder()
                 .setType(Operation.Type.RESERVE)
@@ -41,20 +42,20 @@ public class ReserveOfferRecommendation implements OfferRecommendation {
      * The resource passed in is the fully completed Resource which will be launched.  This may include volume/disk
      * information which is not appropriate for the RESERVE operation.  It is filtered out here.
      */
-    private static Resource getReservedResource(Resource resource) {
+    private static Resource.Builder getReservedResource(
+            Resource.Builder resourceBuilder, ReservationCreator reservationCreator) {
         // The resource passed in is the fully completed Resource which will be launched.  This may include volume/disk
         // information which is not appropriate for the RESERVE operation.  It is filtered out here.
-        Resource.Builder resBuilder = Resource.newBuilder(resource);
-        if (resBuilder.hasDisk() && resBuilder.getDisk().hasSource()) {
+        if (resourceBuilder.hasDisk() && resourceBuilder.getDisk().hasSource()) {
             // Mount volume: Copy disk, but without 'persistence' nor 'volume' fields
-            resBuilder.setDisk(DiskInfo.newBuilder(resBuilder.getDisk())
+            resourceBuilder.setDisk(DiskInfo.newBuilder(resourceBuilder.getDisk())
                     .clearPersistence()
                     .clearVolume());
         } else {
             // Root volume: Clear the disk.
-            resBuilder.clearDisk();
+            resourceBuilder.clearDisk();
         }
-        resBuilder.clearRevocable();
-        return resBuilder.build();
+        resourceBuilder.clearRevocable();
+        return reservationCreator.withResourceId(resourceBuilder);
     }
 }

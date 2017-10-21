@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
+import com.mesosphere.sdk.specification.PortSpec;
 import org.mockito.Mockito;
 
 import com.mesosphere.sdk.dcos.Capabilities;
@@ -18,7 +19,7 @@ import com.mesosphere.sdk.specification.ConfigFileSpec;
 import com.mesosphere.sdk.specification.DefaultServiceSpec;
 import com.mesosphere.sdk.specification.PodInstance;
 import com.mesosphere.sdk.specification.PodSpec;
-import com.mesosphere.sdk.specification.PortSpec;
+import com.mesosphere.sdk.specification.DefaultPortSpec;
 import com.mesosphere.sdk.specification.ResourceSpec;
 import com.mesosphere.sdk.specification.ServiceSpec;
 import com.mesosphere.sdk.specification.TaskSpec;
@@ -237,7 +238,7 @@ public class ServiceTestBuilder {
         taskEnv.putAll(DCOS_TASK_ENVVARS);
         // Inject envvars for any ports with envvar advertisement configured:
         for (ResourceSpec resourceSpec : taskSpec.getResourceSet().getResources()) {
-            if (!(resourceSpec instanceof PortSpec)) {
+            if (!(resourceSpec instanceof DefaultPortSpec)) {
                 continue;
             }
             PortSpec portSpec = (PortSpec) resourceSpec;

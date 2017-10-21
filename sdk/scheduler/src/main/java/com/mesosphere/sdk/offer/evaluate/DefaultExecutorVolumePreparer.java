@@ -19,7 +19,6 @@ public class DefaultExecutorVolumePreparer extends VolumePreparer {
 
     @Override
     public LaunchSetPreparer fromFormerLaunch(Protos.Offer.Operation.LaunchGroup launchGroup) {
-        // TODO(mrb): get reservation, persistence id from launchgroup
         String reservationId = "";
         String persistenceId = "";
 
@@ -33,7 +32,6 @@ public class DefaultExecutorVolumePreparer extends VolumePreparer {
 
     @Override
     protected PodInfoBuilder setVolume(PodInfoBuilder podInfoBuilder) {
-        // TODO(mrb): add to task containers
         // I wonder if these classes should live inside the podinfobuilder, given what they know
         return podInfoBuilder;
     }

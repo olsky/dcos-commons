@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.google.protobuf.TextFormat;
 import com.mesosphere.sdk.offer.*;
+import com.mesosphere.sdk.offer.evaluate.placement.OfferConsumptionVisitor;
 import com.mesosphere.sdk.offer.taskdata.TaskLabelReader;
 import com.mesosphere.sdk.scheduler.SchedulerFlags;
 import com.mesosphere.sdk.scheduler.plan.PodInstanceRequirement;
@@ -51,6 +52,30 @@ public class OfferEvaluator {
         this.targetConfigId = targetConfigId;
         this.schedulerFlags = schedulerFlags;
         this.useDefaultExecutor = useDefaultExecutor;
+    }
+
+    public void evaluate2(PodInstanceRequirement podInstanceRequirement, List<Protos.Offer> offers) {
+        Map<String, Protos.TaskInfo> allTasks = stateStore.fetchTasks().stream()
+                .collect(Collectors.toMap(Protos.TaskInfo::getName, Function.identity()));
+        Map<String, Protos.TaskInfo> thisPodTasks =
+                TaskUtils.getTaskNames(podInstanceRequirement.getPodInstance()).stream()
+                        .map(taskName -> allTasks.get(taskName))
+                        .filter(taskInfo -> taskInfo != null)
+                        .collect(Collectors.toMap(Protos.TaskInfo::getName, Function.identity()));
+        logger.info("Pod: {}, taskInfos for evaluation.", podInstanceRequirement.getPodInstance().getName());
+        thisPodTasks.values().forEach(info -> logger.info(TextFormat.shortDebugString(info)));
+
+        for (Protos.Offer offer : offers) {
+            MesosResourcePool resourcePool = new MesosResourcePool(
+                    offer,
+                    OfferEvaluationUtils.getRole(podInstanceRequirement.getPodInstance().getPod()));
+
+            OfferConsumptionVisitor offerConsumptionVisitor = new OfferConsumptionVisitor(resourcePool, null);
+            VisitorResultCollector<List<EvaluationOutcome>> outcomeCollector =
+                    offerConsumptionVisitor.getVisitorResultCollector();
+
+            SpecVisitor<List<Protos.Offer.Operation>> operationBuilderVisitor = new LaunchGroupVisitor()
+        }
     }
 
     public List<OfferRecommendation> evaluate(PodInstanceRequirement podInstanceRequirement, List<Protos.Offer> offers)
@@ -255,7 +280,7 @@ public class OfferEvaluator {
         List<ResourceSpec> simpleResources = new ArrayList<>();
 
         for (ResourceSpec resourceSpec : resourceSet.getResources()) {
-            if (resourceSpec instanceof PortSpec) {
+            if (resourceSpec instanceof DefaultPortSpec) {
                 if (((PortSpec) resourceSpec).getPort() == 0) {
                     dynamicPorts.add(resourceSpec);
                 } else {
@@ -304,7 +329,7 @@ public class OfferEvaluator {
                 if (resourceSpec instanceof NamedVIPSpec) {
                     evaluationStages.add(
                             new NamedVIPEvaluationStage((NamedVIPSpec) resourceSpec, taskName, Optional.empty()));
-                } else if (resourceSpec instanceof PortSpec) {
+                } else if (resourceSpec instanceof DefaultPortSpec) {
                     evaluationStages.add(new PortEvaluationStage((PortSpec) resourceSpec, taskName, Optional.empty()));
                 } else {
                     evaluationStages.add(new ResourceEvaluationStage(resourceSpec, Optional.empty(), taskName));

@@ -20,7 +20,6 @@ public class PlacementRulePreparer implements LaunchSetPreparer {
             return launchSetBuilder.pass(this, "No placement rule defined");
         }
 
-        // TODO(mrb): this needs to return something else...
         return placementRule.filter(
                 mesosResourcePool.getOffer(),
                 podInfoBuilder.getPodInstance(),
