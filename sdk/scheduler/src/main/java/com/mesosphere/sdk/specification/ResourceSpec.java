@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.mesosphere.sdk.offer.evaluate.ResourceCreator;
 import com.mesosphere.sdk.offer.evaluate.SpecVisitor;
+import com.mesosphere.sdk.offer.evaluate.SpecVisitorException;
 import org.apache.mesos.Protos;
 
 import java.util.Optional;
@@ -34,7 +35,7 @@ public interface ResourceSpec extends ResourceCreator, SpecVisitee {
         return Optional.of(getName());
     }
 
-    default void accept(SpecVisitor specVisitor) {
+    default void accept(SpecVisitor specVisitor) throws SpecVisitorException {
         specVisitor.visit(this);
         specVisitor.finalize(this);
     }

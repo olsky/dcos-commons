@@ -6,6 +6,7 @@ import com.google.protobuf.TextFormat;
 import com.mesosphere.sdk.offer.*;
 import com.mesosphere.sdk.offer.evaluate.placement.OfferConsumptionVisitor;
 import com.mesosphere.sdk.offer.taskdata.TaskLabelReader;
+import com.mesosphere.sdk.scheduler.OfferEvaluationComponentFactory;
 import com.mesosphere.sdk.scheduler.SchedulerFlags;
 import com.mesosphere.sdk.scheduler.plan.PodInstanceRequirement;
 import com.mesosphere.sdk.scheduler.recovery.FailureUtils;
@@ -39,6 +40,7 @@ public class OfferEvaluator {
     private final UUID targetConfigId;
     private final SchedulerFlags schedulerFlags;
     private final boolean useDefaultExecutor;
+    private final OfferEvaluationComponentFactory offerEvaluationComponentFactory;
 
     @Inject
     public OfferEvaluator(
@@ -46,35 +48,49 @@ public class OfferEvaluator {
             String serviceName,
             UUID targetConfigId,
             SchedulerFlags schedulerFlags,
-            boolean useDefaultExecutor) {
+            boolean useDefaultExecutor,
+            OfferEvaluationComponentFactory offerEvaluationComponentFactory) {
         this.stateStore = stateStore;
         this.serviceName = serviceName;
         this.targetConfigId = targetConfigId;
         this.schedulerFlags = schedulerFlags;
         this.useDefaultExecutor = useDefaultExecutor;
+        this.offerEvaluationComponentFactory = offerEvaluationComponentFactory;
     }
 
-    public void evaluate2(PodInstanceRequirement podInstanceRequirement, List<Protos.Offer> offers) {
+    public void evaluate2(
+            PodInstanceRequirement podInstanceRequirement, List<Protos.Offer> offers) throws SpecVisitorException {
         Map<String, Protos.TaskInfo> allTasks = stateStore.fetchTasks().stream()
                 .collect(Collectors.toMap(Protos.TaskInfo::getName, Function.identity()));
-        Map<String, Protos.TaskInfo> thisPodTasks =
+        List<Protos.TaskInfo> thisPodTasks =
                 TaskUtils.getTaskNames(podInstanceRequirement.getPodInstance()).stream()
                         .map(taskName -> allTasks.get(taskName))
                         .filter(taskInfo -> taskInfo != null)
-                        .collect(Collectors.toMap(Protos.TaskInfo::getName, Function.identity()));
+                        .collect(Collectors.toList());
         logger.info("Pod: {}, taskInfos for evaluation.", podInstanceRequirement.getPodInstance().getName());
-        thisPodTasks.values().forEach(info -> logger.info(TextFormat.shortDebugString(info)));
+        thisPodTasks.forEach(info -> logger.info(TextFormat.shortDebugString(info)));
 
         for (Protos.Offer offer : offers) {
             MesosResourcePool resourcePool = new MesosResourcePool(
                     offer,
                     OfferEvaluationUtils.getRole(podInstanceRequirement.getPodInstance().getPod()));
 
-            OfferConsumptionVisitor offerConsumptionVisitor = new OfferConsumptionVisitor(resourcePool, null);
-            VisitorResultCollector<List<EvaluationOutcome>> outcomeCollector =
-                    offerConsumptionVisitor.getVisitorResultCollector();
+            SpecVisitor<List<Protos.Offer.Operation>> launchOperationVisitor =
+                    offerEvaluationComponentFactory.getLaunchOperationVisitor(thisPodTasks, null);
+            OfferConsumptionVisitor offerConsumptionVisitor =
+                    offerEvaluationComponentFactory.getOfferConsumptionVisitor(resourcePool, launchOperationVisitor);
+            ExistingPodVisitor existingPodVisitor = offerEvaluationComponentFactory.getExistingPodVisitor(
+                    resourcePool, thisPodTasks, offerConsumptionVisitor);
 
-            SpecVisitor<List<Protos.Offer.Operation>> operationBuilderVisitor = new LaunchGroupVisitor()
+            VisitorResultCollector<List<OfferRecommendation>> unreserveCollector =
+                    existingPodVisitor.getVisitorResultCollector();
+            VisitorResultCollector<List<EvaluationOutcome>> evaluationOutcomeCollector =
+                    offerConsumptionVisitor.getVisitorResultCollector();
+            VisitorResultCollector<List<Protos.Offer.Operation>> launchCollector =
+                    launchOperationVisitor.getVisitorResultCollector();
+
+            existingPodVisitor.visit(podInstanceRequirement);
+            existingPodVisitor.compileResult();
         }
     }
 
@@ -314,7 +330,7 @@ public class OfferEvaluator {
 
         for (VolumeSpec volumeSpec : podInstanceRequirement.getPodInstance().getPod().getVolumes()) {
             evaluationStages.add(
-                    new VolumeEvaluationStage(volumeSpec, null, Optional.empty(), Optional.empty()));
+                    new VolumeEvaluationStage(volumeSpec, null, Optional.empty(), Optional.empty(), true));
         }
 
         String preReservedRole = null;
@@ -344,7 +360,7 @@ public class OfferEvaluator {
 
             for (VolumeSpec volumeSpec : entry.getValue().getVolumes()) {
                 evaluationStages.add(
-                        new VolumeEvaluationStage(volumeSpec, taskName, Optional.empty(), Optional.empty()));
+                        new VolumeEvaluationStage(volumeSpec, taskName, Optional.empty(), Optional.empty(), true));
             }
 
             if (shouldAddExecutorResources) {

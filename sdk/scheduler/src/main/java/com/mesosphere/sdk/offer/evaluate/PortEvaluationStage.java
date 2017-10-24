@@ -4,7 +4,6 @@ import com.google.protobuf.TextFormat;
 import com.mesosphere.sdk.dcos.DcosConstants;
 import com.mesosphere.sdk.offer.*;
 import com.mesosphere.sdk.offer.taskdata.*;
-import com.mesosphere.sdk.specification.DefaultPortSpec;
 import com.mesosphere.sdk.specification.PortSpec;
 import com.mesosphere.sdk.specification.ResourceSpec;
 import com.mesosphere.sdk.specification.TaskSpec;
@@ -42,9 +41,9 @@ public class PortEvaluationStage implements OfferEvaluationStage {
 
     @Override
     public EvaluationOutcome evaluate(MesosResourcePool mesosResourcePool, PodInfoBuilder podInfoBuilder) {
-        long assignedPort = getPort();
-        // Get the port from the pod info builder based on name or whatever, since it knows hwhether that port is taken or not
-        if (assignedPort == 0) {
+        long requestedPort = portSpec.getValue().getRanges().getRange(0).getBegin();
+        long assignedPort = requestedPort;
+        if (requestedPort == 0) {
             // If this is from an existing pod with the dynamic port already assigned and reserved, just keep it.
             Optional<Long> priorTaskPort = podInfoBuilder.getPriorPortForTask(getTaskName().get(), portSpec);
             if (priorTaskPort.isPresent()) {
@@ -115,7 +114,7 @@ public class PortEvaluationStage implements OfferEvaluationStage {
     protected void setProtos(PodInfoBuilder podInfoBuilder, Protos.Resource resource) {
         long port = resource.getRanges().getRange(0).getBegin();
 
-        final String portEnvKey = portSpec.getEnvKey();
+        final String portEnvKey = portSpec.getEnvKey().get();
         final String portEnvVal = Long.toString(port);
         if (getTaskName().isPresent()) {
             String taskName = getTaskName().get();
@@ -194,7 +193,7 @@ public class PortEvaluationStage implements OfferEvaluationStage {
         // compile a list of those to check against the offered ports.
         for (TaskSpec task : podInfoBuilder.getPodInstance().getPod().getTasks()) {
             for (ResourceSpec resourceSpec : task.getResourceSet().getResources()) {
-                if (resourceSpec instanceof DefaultPortSpec) {
+                if (resourceSpec instanceof PortSpec) {
                     PortSpec portSpec = (PortSpec) resourceSpec;
                     if (portSpec.getPort() != 0) {
                         consumedPorts.add((int) portSpec.getPort());

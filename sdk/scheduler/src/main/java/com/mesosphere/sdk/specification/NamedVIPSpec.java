@@ -11,6 +11,7 @@ import org.apache.mesos.Protos.DiscoveryInfo;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.util.Collection;
+import java.util.Optional;
 
 /**
  * This class represents a port mapped to a DC/OS named VIP.
@@ -39,7 +40,7 @@ public class NamedVIPSpec extends DefaultPortSpec {
             @JsonProperty("vip-port") Integer vipPort,
             @JsonProperty("network-names") Collection<String> networkNames) {
 
-        super(value, role, preReservedRole, principal, envKey, portName, visibility, networkNames);
+        super(value, role, preReservedRole, principal, Optional.ofNullable(envKey), portName, visibility, networkNames);
         this.protocol = protocol;
         this.vipName = vipName;
         this.vipPort = vipPort;

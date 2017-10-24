@@ -1,10 +1,12 @@
 package com.mesosphere.sdk.offer.evaluate;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mesosphere.sdk.specification.VolumeSpec;
 import org.apache.mesos.Protos;
 
 public interface VolumeCreator extends ResourceCreator {
 
+    @JsonIgnore
     VolumeSpec getVolumeSpec();
 
     @Override

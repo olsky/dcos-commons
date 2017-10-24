@@ -195,7 +195,6 @@ public class ConfigStore<T extends Configuration> implements ConfigTargetStore {
         }
     }
 
-    @Override
     public Optional<T> fetchTargetConfig() {
         UUID targetUuid;
 

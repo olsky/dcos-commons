@@ -251,7 +251,7 @@ public class ServiceTestBuilder {
                 // See: /proc/sys/net/ipv4/ip_local_port_range
                 portVal = RANDOM.nextInt(61000 - 32768 /* result: 0 thru 28231 */) + 32768;
             }
-            taskEnv.put(portSpec.getEnvKey(), String.valueOf(portVal));
+            taskEnv.put(portSpec.getEnvKey().get(), String.valueOf(portVal));
         }
         return taskEnv;
     }

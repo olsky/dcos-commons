@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.mesosphere.sdk.offer.evaluate.SpecVisitor;
+import com.mesosphere.sdk.offer.evaluate.SpecVisitorException;
 import com.mesosphere.sdk.offer.evaluate.placement.PlacementRule;
 import com.mesosphere.sdk.specification.util.RLimit;
 
@@ -61,7 +62,7 @@ public interface PodSpec {
         return podSpec.getType() + "-" + index;
     }
 
-    default void accept(SpecVisitor specVisitor) {
+    default void accept(SpecVisitor specVisitor) throws SpecVisitorException {
         specVisitor.visit(this);
 
         for (VolumeSpec volumeSpec : getVolumes()) {
