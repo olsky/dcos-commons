@@ -1,5 +1,6 @@
 package com.mesosphere.sdk.offer;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.TextFormat;
 import com.mesosphere.sdk.dcos.Capabilities;
 import com.mesosphere.sdk.specification.PodSpec;
@@ -99,8 +100,8 @@ public class MesosResourcePool {
         return availablePorts.size() != 0 ? availablePorts.get(0).getBegin() : null;
     }
 
+    @VisibleForTesting
     private List<Value.Range> getAssignedPortRanges(PodSpec podSpec) {
-        // TODO(mrb): visible for testing
         if (assignedRanges == null) {
             assignedRanges = podSpec.getTasks().stream()
                     .flatMap(t -> t.getResourceSet().getResources().stream())

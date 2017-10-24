@@ -12,8 +12,8 @@ public interface OfferEvaluationStage {
      * deducting used resources from the pool, and creating the appropriate {@link EvaluationOutcome}.
      *
      * @param mesosResourcePool the available resources left available for this stage to consume
-     * @param cursor a cursor for the task or executor being evaluated in this pod
+     * @param podInfoBuilder the grouping of all task and executor builders for the pod
      * @return an {@link EvaluationOutcome} describing whether this evaluation stage succeeded or failed, and why
      */
-    EvaluationOutcome evaluate(MesosResourcePool mesosResourcePool, PodEntityCursor cursor);
+    EvaluationOutcome evaluate(MesosResourcePool mesosResourcePool, PodInfoBuilder podInfoBuilder);
 }

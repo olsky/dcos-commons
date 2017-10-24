@@ -38,27 +38,21 @@ import java.util.Optional;
 import static com.mesosphere.sdk.offer.evaluate.EvaluationOutcome.fail;
 import static com.mesosphere.sdk.offer.evaluate.EvaluationOutcome.pass;
 
-public class OfferConsumptionVisitor implements SpecVisitor<OfferConsumptionVisitor.OfferConsumptionResult> {
+public class OfferConsumptionVisitor implements SpecVisitor<List<EvaluationOutcome>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(OfferConsumptionVisitor.class);
 
     private final MesosResourcePool mesosResourcePool;
     private final ReservationCreator reservationCreator;
     private final SpecVisitor delegate;
     private final List<EvaluationOutcome> evaluationOutcomes;
-    private final List<OfferRecommendation> offerRecommendations;
-    private VisitorResultCollector<OfferConsumptionResult> collector;
+    private VisitorResultCollector<List<EvaluationOutcome>> collector;
     private PodSpec currentPodSpec;
-    // TODO(mrb)
-    // APPROACHES: traverse task infos in both offer consumption and reservation visitors;
-    // pass the resource pool to the existing pod visitor; this is slightly distasteful but probably the simplest way;
-    // do some sort of spec arithmetic and put the unreserves in a completely separate stage entirely.
 
     public OfferConsumptionVisitor(
             MesosResourcePool mesosResourcePool, ReservationCreator reservationCreator, SpecVisitor delegate) {
         this.mesosResourcePool = mesosResourcePool;
         this.delegate = delegate;
         this.evaluationOutcomes = new ArrayList<>();
-        this.offerRecommendations = new ArrayList<>();
         this.collector = createVisitorResultCollector();
         this.reservationCreator = reservationCreator;
     }
@@ -91,7 +85,7 @@ public class OfferConsumptionVisitor implements SpecVisitor<OfferConsumptionVisi
                     resourceId).build());
         }
 
-        OfferRecommendation offerRecommendation = null;
+        OfferRecommendation offerRecommendation;
         MesosResource mesosResource = mesosResourceOptional.get();
 
         if (ValueUtils.equal(mesosResource.getValue(), resourceSpec.getValue())) {
@@ -161,7 +155,6 @@ public class OfferConsumptionVisitor implements SpecVisitor<OfferConsumptionVisi
                         resourceId)
                         .build());
             } else {
-                // TODO(mrb): Where should unreserves happen??? Seems orthogonal to here...
                 LOGGER.info("    Reservation for resource '%s' needs decreasing from current %s to required {}",
                         resourceSpec.getName(),
                         TextFormat.shortDebugString(mesosResource.getValue()),
@@ -193,11 +186,12 @@ public class OfferConsumptionVisitor implements SpecVisitor<OfferConsumptionVisi
     public VolumeSpec visitImplementation(VolumeSpec volumeSpec) {
         Optional<String> resourceId = ResourceUtils.getResourceId(volumeSpec.getResource().build());
         String detailsClause = resourceId.isPresent() ? "previously reserved " : "";
+        String message;
 
         // if has running exec
         Optional<MesosResource> mesosResourceOptional;
         if (volumeSpec.getType().equals(VolumeSpec.Type.ROOT)) {
-            return (VolumeSpec) visitImplementation((ResourceSpec) volumeSpec);
+            volumeSpec = (VolumeSpec) visitImplementation((ResourceSpec) volumeSpec);
         } else {
             if (!resourceId.isPresent()) {
                 mesosResourceOptional =
@@ -210,20 +204,19 @@ public class OfferConsumptionVisitor implements SpecVisitor<OfferConsumptionVisi
             if (!mesosResourceOptional.isPresent()) {
                 evaluationOutcomes.add(fail(this, "Failed to find MOUNT volume for '%s'.", volumeSpec).build());
             }
-
-            evaluationOutcomes.add(pass(
-                    this,
-                    Collections.emptyList(),
-                    "Offer has sufficient %s'disk': for resource: '%s' with resourceId: '%s' and persistenceId: '%s'",
-                    detailsClause, volumeSpec, resourceId, "PERSISTENCE ID")
-                    .build());
+            // TODO(mrb): persistence id?
         }
 
         Optional<String> persistenceId = ResourceUtils.getPersistenceId(volumeSpec.getResource().build());
         if (!persistenceId.isPresent()) {
-            // TODO(mrb): fix
-            offerRecommendations.add(
-                    new CreateOfferRecommendation(mesosResourcePool.getOffer(), volumeSpec.getResource().build()));
+            LOGGER.info("    Resource '{}' requires a CREATE operation", volumeSpec.getName());
+            OfferRecommendation createRecommendation = new CreateOfferRecommendation(
+                    mesosResourcePool.getOffer(), volumeSpec.getResource().build());
+            evaluationOutcomes.add(pass(
+                    this,
+                    Arrays.asList(createRecommendation),
+                    "Offer has sufficient %s'disk': for resource: '%s' with resourceId: '%s' and persistenceId: '%s'",
+                    detailsClause, volumeSpec, resourceId, persistenceId).build());
         }
 
         return volumeSpec;
@@ -272,11 +265,11 @@ public class OfferConsumptionVisitor implements SpecVisitor<OfferConsumptionVisi
 
     @Override
     public void compileResultImplementation() {
-        getVisitorResultCollector().setResult(new OfferConsumptionResult(offerRecommendations, evaluationOutcomes));
+        getVisitorResultCollector().setResult(evaluationOutcomes);
     }
 
     @Override
-    public VisitorResultCollector<OfferConsumptionResult> getVisitorResultCollector() {
+    public VisitorResultCollector<List<EvaluationOutcome>> getVisitorResultCollector() {
         return collector;
     }
 

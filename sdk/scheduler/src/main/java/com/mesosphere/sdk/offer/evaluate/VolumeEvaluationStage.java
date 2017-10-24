@@ -24,17 +24,20 @@ public class VolumeEvaluationStage implements OfferEvaluationStage {
     private final VolumeSpec volumeSpec;
     private final Optional<String> persistenceId;
     private final String taskName;
-    private Optional<String> resourceId;
+    private final Optional<String> resourceId;
+    private final boolean useDefaultExecutor;
 
     public VolumeEvaluationStage(
             VolumeSpec volumeSpec,
             String taskName,
             Optional<String> resourceId,
-            Optional<String> persistenceId) {
+            Optional<String> persistenceId,
+            boolean useDefaultExecutor) {
         this.volumeSpec = volumeSpec;
         this.taskName = taskName;
         this.resourceId = resourceId;
         this.persistenceId = persistenceId;
+        this.useDefaultExecutor = useDefaultExecutor;
     }
 
     private boolean createsVolume() {
@@ -42,24 +45,33 @@ public class VolumeEvaluationStage implements OfferEvaluationStage {
     }
 
     @Override
-    public EvaluationOutcome evaluate(MesosResourcePool mesosResourcePool, PodEntityCursor cursor) {
+    public EvaluationOutcome evaluate(MesosResourcePool mesosResourcePool, PodInfoBuilder podInfoBuilder) {
         String detailsClause = resourceId.isPresent() ? "previously reserved " : "";
-        String message = null;
 
         List<OfferRecommendation> offerRecommendations = new ArrayList<>();
         Resource resource;
         final MesosResource mesosResource;
-        ResourceCreator reservationPreparer = new ReservedVolumeCreator(volumeSpec, resourceId, persistenceId);
 
-        //boolean isRunningExecutor = podInfoBuilder.getExecutorBuilder().isPresent() &&
-        //        isRunningExecutor(podInfoBuilder.getExecutorBuilder().get().build(), mesosResourcePool.getOffer());
-        if (cursor.hasRunningExecutor()) {
+        boolean isRunningExecutor = podInfoBuilder.getExecutorBuilder().isPresent() &&
+                isRunningExecutor(podInfoBuilder.getExecutorBuilder().get().build(), mesosResourcePool.getOffer());
+        if (taskName == null && isRunningExecutor && resourceId.isPresent() && persistenceId.isPresent()) {
             // This is a volume on a running executor, so it isn't present in the offer, but we need to make sure to
             // add it to the ExecutorInfo as well as whatever task is being launched.
-            message = String.format(
+            podInfoBuilder.setExecutorVolume(volumeSpec);
+            mesosResource = new MesosResource(
+                    PodInfoBuilder.getExistingExecutorVolume(volumeSpec, resourceId.get(), persistenceId.get()));
+
+            return pass(
+                    this,
+                    Collections.emptyList(),
                     "Offer contains executor with existing volume with resourceId: '%s' and persistenceId: '%s'",
-                    resourceId, persistenceId);
-        } else if (volumeSpec.getType().equals(VolumeSpec.Type.ROOT)) {
+                    resourceId,
+                    persistenceId)
+                    .mesosResource(mesosResource)
+                    .build();
+        }
+
+        if (volumeSpec.getType().equals(VolumeSpec.Type.ROOT)) {
             OfferEvaluationUtils.ReserveEvaluationOutcome reserveEvaluationOutcome =
                     OfferEvaluationUtils.evaluateSimpleResource(
                             this,
@@ -113,7 +125,6 @@ public class VolumeEvaluationStage implements OfferEvaluationStage {
             }
         }
 
-        resource = reservationPreparer.getResource().build();
         if (createsVolume()) {
             logger.info("    Resource '{}' requires a CREATE operation", volumeSpec.getName());
             offerRecommendations.add(new CreateOfferRecommendation(mesosResourcePool.getOffer(), resource));
@@ -121,20 +132,35 @@ public class VolumeEvaluationStage implements OfferEvaluationStage {
 
         logger.info("  Generated '{}' resource for task: [{}]",
                 volumeSpec.getName(), TextFormat.shortDebugString(resource));
+        OfferEvaluationUtils.setProtos(podInfoBuilder, resource, getTaskName());
 
-        cursor.appendResource(reservationPreparer);
-        if (message == null) {
-            message = String.format(
-                    "Offer has sufficient %s'disk': for resource: '%s' with resourceId: '%s' and persistenceId: '%s'",
-                    detailsClause, volumeSpec, resourceId, persistenceId);
+        if (taskName == null && useDefaultExecutor) {
+            podInfoBuilder.setExecutorVolume(volumeSpec);
         }
 
         return pass(
                 this,
                 offerRecommendations,
-                message)
-                // TODO(mrb): look into this
-                .mesosResource(null)
+                "Offer contains sufficient %s'disk': for resource: '%s' with resourceId: '%s' and persistenceId: '%s'",
+                detailsClause,
+                volumeSpec,
+                resourceId,
+                persistenceId)
+                .mesosResource(mesosResource)
                 .build();
+    }
+
+    private Optional<String> getTaskName() {
+        return Optional.ofNullable(taskName);
+    }
+
+    private static boolean isRunningExecutor(Protos.ExecutorInfo executorInfo, Protos.Offer offer) {
+        for (Protos.ExecutorID execId : offer.getExecutorIdsList()) {
+            if (execId.equals(executorInfo.getExecutorId())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
