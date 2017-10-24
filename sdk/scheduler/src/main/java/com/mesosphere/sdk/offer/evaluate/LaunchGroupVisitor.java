@@ -61,7 +61,6 @@ public class LaunchGroupVisitor implements SpecVisitor<List<Protos.Offer.Operati
     private List<Protos.Offer.Operation> operations;
     private boolean isTaskActive;
 
-    // TODO(mrb): tasks to launch, transients, etc
     public LaunchGroupVisitor(
             Collection<Protos.TaskInfo> taskInfos,
             String serviceName,
@@ -97,6 +96,10 @@ public class LaunchGroupVisitor implements SpecVisitor<List<Protos.Offer.Operati
 
     @Override
     public TaskSpec visitImplementation(TaskSpec taskSpec) throws InvalidRequirementException {
+        if (!podInstanceRequirement.getTasksToLaunch().contains(taskSpec.getName())) {
+            return taskSpec;
+        }
+
         launchGroup = Protos.Offer.Operation.LaunchGroup.newBuilder();
         isTaskActive = true;
         Protos.TaskInfo.Builder taskBuilder = launchGroup.getTaskGroupBuilder().addTasksBuilder()
@@ -168,6 +171,13 @@ public class LaunchGroupVisitor implements SpecVisitor<List<Protos.Offer.Operati
 
     @Override
     public void finalize(TaskSpec taskSpec) {
+        if (!podInstanceRequirement.getTasksToLaunch().contains(taskSpec.getName())) {
+            return;
+        }
+
+        operations.add(
+                Protos.Offer.Operation.newBuilder()
+                        .setType(Protos.Offer.Operation.Type.LAUNCH_GROUP).setLaunchGroup(launchGroup).build());
         isTaskActive = false;
     }
 

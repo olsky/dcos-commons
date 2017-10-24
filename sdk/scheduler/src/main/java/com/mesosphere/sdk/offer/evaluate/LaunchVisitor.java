@@ -41,7 +41,7 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public abstract class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Operation>> {
+public class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Operation>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(LaunchGroupVisitor.class);
 
     private static final String CONFIG_TEMPLATE_KEY_FORMAT = "CONFIG_TEMPLATE_%s";
@@ -97,6 +97,10 @@ public abstract class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Ope
 
     @Override
     public TaskSpec visitImplementation(TaskSpec taskSpec) throws InvalidRequirementException {
+        if (!podInstanceRequirement.getTasksToLaunch().contains(taskSpec.getName())) {
+            return taskSpec;
+        }
+
         launch = Protos.Offer.Operation.Launch.newBuilder();
         isTaskActive = true;
         Protos.TaskInfo.Builder taskBuilder = launch.addTaskInfosBuilder()
@@ -138,6 +142,13 @@ public abstract class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Ope
 
     @Override
     public void finalize(TaskSpec taskSpec) {
+        if (!podInstanceRequirement.getTasksToLaunch().contains(taskSpec.getName())) {
+            return;
+        }
+
+        operations.add(
+                Protos.Offer.Operation.newBuilder()
+                        .setLaunch(launch).setType(Protos.Offer.Operation.Type.LAUNCH).build());
         isTaskActive = false;
     }
 

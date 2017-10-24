@@ -1,6 +1,7 @@
 package com.mesosphere.sdk.offer.evaluate;
 
 import com.mesosphere.sdk.offer.taskdata.AuxLabelAccess;
+import com.mesosphere.sdk.offer.Constants;
 import com.mesosphere.sdk.specification.ResourceSpec;
 import org.apache.mesos.Protos;
 
@@ -12,6 +13,14 @@ public class HierarchicalReservationCreator implements ReservationCreator {
     @Override
     public Protos.Resource.Builder withReservation(ResourceSpec resourceSpec, Optional<String> resourceId) {
         Protos.Resource.Builder resourceBuilder = resourceSpec.getResource();
+
+        if (!resourceSpec.getPreReservedRole().equals(Constants.ANY_ROLE) && !resourceId.isPresent()) {
+            resourceBuilder.addReservations(
+                    Protos.Resource.ReservationInfo.newBuilder()
+                    .setRole(resourceSpec.getPreReservedRole())
+                    .setType(Protos.Resource.ReservationInfo.Type.STATIC));
+        }
+
         Protos.Resource.ReservationInfo.Builder reservationBuilder =
                 Protos.Resource.ReservationInfo.newBuilder()
                         .setRole(resourceSpec.getRole())
@@ -21,7 +30,6 @@ public class HierarchicalReservationCreator implements ReservationCreator {
         if (resourceId.isPresent()) {
             AuxLabelAccess.setResourceId(reservationBuilder, resourceId.get());
         }
-        // TODO(mrb): deal with ANY_ROLE stuff...
         resourceBuilder.addReservations(reservationBuilder);
 
         return resourceBuilder;
