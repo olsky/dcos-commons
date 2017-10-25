@@ -13,15 +13,17 @@ import org.apache.mesos.Protos.TaskInfo;
 /**
  * This {@link OfferRecommendation} encapsulates a Mesos {@code LAUNCH} Operation.
  */
-public class LaunchOfferRecommendation implements OfferRecommendation {
+public class LaunchGroupOfferRecommendation implements OfferRecommendation {
     private final Offer offer;
     private final Operation operation;
     private final TaskInfo taskInfo;
+    private final ExecutorInfo executorInfo;
     private final boolean shouldLaunch;
 
-    public LaunchOfferRecommendation(
+    public LaunchGroupOfferRecommendation(
             Offer offer,
             TaskInfo originalTaskInfo,
+            Protos.ExecutorInfo executorInfo,
             boolean shouldLaunch) {
         this.offer = offer;
         this.shouldLaunch = shouldLaunch;
@@ -35,6 +37,7 @@ public class LaunchOfferRecommendation implements OfferRecommendation {
         taskBuilder.setSlaveId(offer.getSlaveId());
 
         this.taskInfo = taskBuilder.build();
+        this.executorInfo = executorInfo;
         this.operation = getLaunchOperation();
     }
 
@@ -56,7 +59,9 @@ public class LaunchOfferRecommendation implements OfferRecommendation {
      * Returns the {@link TaskInfo} to be passed to a StateStore upon launch.
      */
     public TaskInfo getStoreableTaskInfo() {
-        return taskInfo;
+        return taskInfo.toBuilder()
+                .setExecutor(executorInfo)
+                .build();
     }
 
     @Override
@@ -74,9 +79,11 @@ public class LaunchOfferRecommendation implements OfferRecommendation {
         }
         taskBuilder.setSlaveId(offer.getSlaveId());
 
-        builder.setType(Protos.Offer.Operation.Type.LAUNCH)
-                .getLaunchBuilder().addTaskInfos(TaskPackingUtils.pack(taskInfo));
-
+        builder.setType(Protos.Offer.Operation.Type.LAUNCH_GROUP)
+                .getLaunchGroupBuilder()
+                .setExecutor(executorInfo)
+                .getTaskGroupBuilder()
+                .addTasks(taskInfo);
         return builder.build();
     }
 }

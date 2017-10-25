@@ -10,8 +10,8 @@ import java.util.UUID;
 public class LegacyReservationCreator implements ReservationCreator {
 
     @Override
-    public Protos.Resource.Builder withReservation(ResourceSpec resourceSpec, Optional<String> resourceId) {
-        Protos.Resource.Builder resourceBuilder = resourceSpec.getResource();
+    public Protos.Resource.Builder withReservation(
+            ResourceSpec resourceSpec, Protos.Resource.Builder resourceBuilder, Optional<String> resourceId) {
         Protos.Resource.ReservationInfo.Builder reservationBuilder =
                 Protos.Resource.ReservationInfo.newBuilder().setPrincipal(resourceSpec.getPrincipal());
 

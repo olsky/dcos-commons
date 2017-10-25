@@ -11,9 +11,8 @@ import java.util.UUID;
 public class HierarchicalReservationCreator implements ReservationCreator {
 
     @Override
-    public Protos.Resource.Builder withReservation(ResourceSpec resourceSpec, Optional<String> resourceId) {
-        Protos.Resource.Builder resourceBuilder = resourceSpec.getResource();
-
+    public Protos.Resource.Builder withReservation(
+            ResourceSpec resourceSpec, Protos.Resource.Builder resourceBuilder, Optional<String> resourceId) {
         if (!resourceSpec.getPreReservedRole().equals(Constants.ANY_ROLE) && !resourceId.isPresent()) {
             resourceBuilder.addReservations(
                     Protos.Resource.ReservationInfo.newBuilder()

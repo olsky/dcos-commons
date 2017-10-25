@@ -7,6 +7,8 @@ import com.mesosphere.sdk.dcos.DcosConstants;
 import com.mesosphere.sdk.offer.CommonIdUtils;
 import com.mesosphere.sdk.offer.Constants;
 import com.mesosphere.sdk.offer.InvalidRequirementException;
+import com.mesosphere.sdk.offer.LaunchOfferRecommendation;
+import com.mesosphere.sdk.offer.OfferRecommendation;
 import com.mesosphere.sdk.offer.taskdata.AuxLabelAccess;
 import com.mesosphere.sdk.offer.taskdata.EnvConstants;
 import com.mesosphere.sdk.offer.taskdata.EnvUtils;
@@ -41,15 +43,16 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Operation>> {
+public class LaunchVisitor implements SpecVisitor<List<OfferRecommendation>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(LaunchGroupVisitor.class);
 
     private static final String CONFIG_TEMPLATE_KEY_FORMAT = "CONFIG_TEMPLATE_%s";
     private static final String CONFIG_TEMPLATE_DOWNLOAD_PATH = "config-templates/";
 
     private final SpecVisitor delegate;
-    private final VisitorResultCollector<List<Protos.Offer.Operation>> collector;
+    private final VisitorResultCollector<List<OfferRecommendation>> collector;
     private final Collection<Protos.TaskInfo> taskInfos;
+    private final Protos.Offer offer;
     private final String serviceName;
     private final Protos.FrameworkID frameworkID;
     private final UUID targetConfigurationId;
@@ -58,18 +61,20 @@ public class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Operation>> 
     private Protos.ExecutorInfo executorInfo;
     private Protos.Offer.Operation.Launch.Builder launch;
     private PodInstanceRequirement podInstanceRequirement;
-    private List<Protos.Offer.Operation> operations;
+    private List<OfferRecommendation> recommendations;
     private boolean isTaskActive;
 
     // TODO(mrb): tasks to launch, transients, etc
     public LaunchVisitor(
             Collection<Protos.TaskInfo> taskInfos,
+            Protos.Offer offer,
             String serviceName,
             Protos.FrameworkID frameworkID,
             UUID targetConfigurationId,
             SchedulerFlags schedulerFlags,
             SpecVisitor delegate) {
         this.taskInfos = taskInfos;
+        this.offer = offer;
         this.serviceName = serviceName;
         this.frameworkID = frameworkID;
         this.targetConfigurationId = targetConfigurationId;
@@ -77,7 +82,7 @@ public class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Operation>> 
         this.delegate = delegate;
         this.collector = createVisitorResultCollector();
 
-        this.operations = new ArrayList<>();
+        this.recommendations = new ArrayList<>();
         this.isTaskActive = false;
     }
 
@@ -90,7 +95,7 @@ public class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Operation>> 
 
     @Override
     public PodSpec visitImplementation(PodSpec podSpec) {
-        executorInfo = getExecutorInfo(podInstanceRequirement.getPodInstance().getPod());
+        executorInfo = getExecutorInfo(podSpec);
 
         return podSpec;
     }
@@ -103,9 +108,10 @@ public class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Operation>> 
 
         launch = Protos.Offer.Operation.Launch.newBuilder();
         isTaskActive = true;
+        String taskName = TaskSpec.getInstanceName(podInstanceRequirement.getPodInstance(), taskSpec);
         Protos.TaskInfo.Builder taskBuilder = launch.addTaskInfosBuilder()
-                .setName(TaskSpec.getInstanceName(podInstanceRequirement.getPodInstance(), taskSpec))
-                .setTaskId(CommonIdUtils.emptyTaskId())
+                .setName(taskName)
+                .setTaskId(CommonIdUtils.toTaskId(taskName))
                 .setSlaveId(CommonIdUtils.emptyAgentId());
 
         // create default labels:
@@ -141,15 +147,15 @@ public class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Operation>> 
     }
 
     @Override
-    public void finalize(TaskSpec taskSpec) {
-        if (!podInstanceRequirement.getTasksToLaunch().contains(taskSpec.getName())) {
-            return;
-        }
-
-        operations.add(
-                Protos.Offer.Operation.newBuilder()
-                        .setLaunch(launch).setType(Protos.Offer.Operation.Type.LAUNCH).build());
+    public TaskSpec finalizeImplementation(TaskSpec taskSpec) {
+        recommendations.add(
+                new LaunchOfferRecommendation(
+                        offer,
+                        launch.getTaskInfos(0),
+                        podInstanceRequirement.getTasksToLaunch().contains(taskSpec.getName())));
         isTaskActive = false;
+
+        return taskSpec;
     }
 
     @Override
@@ -177,7 +183,7 @@ public class LaunchVisitor implements SpecVisitor<List<Protos.Offer.Operation>> 
 
     @Override
     public void compileResultImplementation() {
-        getVisitorResultCollector().setResult(operations);
+        getVisitorResultCollector().setResult(recommendations);
     }
 
     @Override

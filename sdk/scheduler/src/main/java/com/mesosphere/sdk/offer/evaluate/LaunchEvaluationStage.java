@@ -49,7 +49,7 @@ public class LaunchEvaluationStage implements OfferEvaluationStage {
         return pass(
                 this,
                 Arrays.asList(new LaunchOfferRecommendation(
-                        offer, taskBuilder.build(), executorBuilder.build(), shouldLaunch, useDefaultExecutor)),
+                        offer, taskBuilder.build(), shouldLaunch)),
                 "Added launch information to offer requirement")
                 .build();
     }

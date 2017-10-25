@@ -2,13 +2,12 @@ package com.mesosphere.sdk.specification;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.mesos.Protos;
 
 import java.util.Collection;
 
-/**
- * Created by mbrowning on 10/17/17.
- */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
 public interface PortSpec extends ResourceSpec {
     /**
      * Returns a copy of the provided {@link DefaultPortSpec} which has been updated to have the provided {@code value}.
@@ -20,7 +19,7 @@ public interface PortSpec extends ResourceSpec {
                 portSpec.getRole(),
                 portSpec.getPreReservedRole(),
                 portSpec.getPrincipal(),
-                portSpec.getEnvKey(),
+                portSpec.getEnvKey().get(),
                 portSpec.getPortName(),
                 portSpec.getVisibility(),
                 portSpec.getNetworkNames());

@@ -33,12 +33,12 @@ public class DefaultPortSpec extends DefaultResourceSpec implements PortSpec {
             @JsonProperty("role") String role,
             @JsonProperty("pre-reserved-role") String preReservedRole,
             @JsonProperty("principal") String principal,
-            @JsonProperty("env-key") Optional<String> envKey,
+            @JsonProperty("env-key") String envKey,
             @JsonProperty("port-name") String portName,
             @JsonProperty("visibility") DiscoveryInfo.Visibility visibility,
             @JsonProperty("network-names") Collection<String> networkNames) {
         super(Constants.PORTS_RESOURCE_TYPE, value, role, preReservedRole, principal);
-        this.envKey = envKey;
+        this.envKey = Optional.ofNullable(envKey);
         this.portName = portName;
         if (visibility == null) {
             // TODO(nickbp): Remove this compatibility fallback after October 2017

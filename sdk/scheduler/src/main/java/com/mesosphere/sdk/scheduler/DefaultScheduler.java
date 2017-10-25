@@ -628,12 +628,7 @@ public class DefaultScheduler extends AbstractScheduler {
                         configStore.getTargetConfig(),
                         schedulerFlags,
                         Capabilities.getInstance().supportsDefaultExecutor(),
-                        new OfferEvaluationComponentFactory(
-                                Capabilities.getInstance(),
-                                serviceSpec.getName(),
-                                stateStore.fetchFrameworkId().get(),
-                                configStore.getTargetConfig(),
-                                schedulerFlags)),
+                        Capabilities.getInstance()),
                 stateStore,
                 taskKiller);
     }

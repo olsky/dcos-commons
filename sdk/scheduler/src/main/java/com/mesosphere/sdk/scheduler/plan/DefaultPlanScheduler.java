@@ -103,8 +103,8 @@ public class DefaultPlanScheduler implements PlanScheduler {
         // requirement and accept them, if any are found:
         List<OfferRecommendation> recommendations = null;
         try {
-            recommendations = offerEvaluator.evaluate(podInstanceRequirement, offers);
-        } catch (InvalidRequirementException e) {
+            recommendations = offerEvaluator.evaluate2(podInstanceRequirement, offers);
+        } catch (com.mesosphere.sdk.offer.evaluate.SpecVisitorException e) {
             logger.error("Failed generate OfferRequirement.", e);
             return Collections.emptyList();
         }

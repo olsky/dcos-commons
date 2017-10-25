@@ -9,6 +9,7 @@ public interface VolumeCreator extends ResourceCreator {
     @JsonIgnore
     VolumeSpec getVolumeSpec();
 
+    @JsonIgnore
     @Override
     default Protos.Resource.Builder getResource() {
         Protos.Resource.Builder builder = ResourceCreator.super.getResource();

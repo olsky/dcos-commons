@@ -11,77 +11,148 @@ import java.util.Optional;
 
 public interface SpecVisitor<T> {
 
-    default void visit(PodInstanceRequirement podInstanceRequirement) throws SpecVisitorException {
+    default PodInstanceRequirement visit(PodInstanceRequirement podInstanceRequirement) throws SpecVisitorException {
         PodInstanceRequirement visited = visitImplementation(podInstanceRequirement);
-        visit(podInstanceRequirement.getPodInstance().getPod());
 
         if (getDelegate().isPresent()) {
-            getDelegate().get().visit(visited);
+            visited = getDelegate().get().visit(visited);
         }
+
+        return visited;
     }
 
     PodInstanceRequirement visitImplementation(
             PodInstanceRequirement podInstanceRequirement) throws SpecVisitorException;
 
-    default void visit(PodSpec podSpec) throws SpecVisitorException {
+    default PodSpec visit(PodSpec podSpec) throws SpecVisitorException {
         PodSpec visited = visitImplementation(podSpec);
 
         if (getDelegate().isPresent()) {
-            getDelegate().get().visit(visited);
+            visited = getDelegate().get().visit(visited);
         }
+
+        return visited;
     }
 
     PodSpec visitImplementation(PodSpec podSpec) throws SpecVisitorException;
 
-    default void visit(TaskSpec taskSpec) throws SpecVisitorException {
+    default TaskSpec visit(TaskSpec taskSpec) throws SpecVisitorException {
         TaskSpec visited = visitImplementation(taskSpec);
 
         if (getDelegate().isPresent()) {
-            getDelegate().get().visit(visited);
+            visited = getDelegate().get().visit(visited);
         }
+
+        return visited;
     }
 
     TaskSpec visitImplementation(TaskSpec taskSpec) throws SpecVisitorException;
 
-    default void visit(ResourceSpec resourceSpec) throws SpecVisitorException {
+    default ResourceSpec visit(ResourceSpec resourceSpec) throws SpecVisitorException {
         ResourceSpec visited = visitImplementation(resourceSpec);
 
         if (getDelegate().isPresent()) {
-            getDelegate().get().visit(visited);
+            visited = getDelegate().get().visit(visited);
         }
+
+        return visited;
     }
 
     ResourceSpec visitImplementation(ResourceSpec resourceSpec) throws SpecVisitorException;
 
-    default void visit(VolumeSpec volumeSpec) throws SpecVisitorException {
+    default VolumeSpec visit(VolumeSpec volumeSpec) throws SpecVisitorException {
         VolumeSpec visited = visitImplementation(volumeSpec);
 
         if (getDelegate().isPresent()) {
-            getDelegate().get().visit(visited);
+            visited = getDelegate().get().visit(visited);
         }
+
+        return visited;
     }
 
     VolumeSpec visitImplementation(VolumeSpec volumeSpec) throws SpecVisitorException;
 
-    default void visit(PortSpec portSpec) throws SpecVisitorException {
+    default PortSpec visit(PortSpec portSpec) throws SpecVisitorException {
         PortSpec visited = visitImplementation(portSpec);
 
         if (getDelegate().isPresent()) {
-            getDelegate().get().visit(visited);
+            visited = getDelegate().get().visit(visited);
         }
+
+        return visited;
     }
 
     PortSpec visitImplementation(PortSpec portSpec) throws SpecVisitorException;
 
-    default void finalize(PodSpec podSpec) throws SpecVisitorException { }
+    default PodSpec finalize(PodSpec podSpec) throws SpecVisitorException {
+        PodSpec finalized = finalizeImplementation(podSpec);
 
-    default void finalize(TaskSpec taskSpec) throws SpecVisitorException { }
+        if (getDelegate().isPresent()) {
+            finalized = getDelegate().get().finalize(finalized);
+        }
 
-    default void finalize(ResourceSpec resourceSpec) throws SpecVisitorException { }
+        return finalized;
+    }
 
-    default void finalize(VolumeSpec volumeSpec) throws SpecVisitorException { }
+    default PodSpec finalizeImplementation(PodSpec podSpec) throws SpecVisitorException {
+        return podSpec;
+    }
 
-    default void finalize(PortSpec portSpec) throws SpecVisitorException { }
+    default TaskSpec finalize(TaskSpec taskSpec) throws SpecVisitorException {
+        TaskSpec finalized = finalizeImplementation(taskSpec);
+
+        if (getDelegate().isPresent()) {
+            finalized = getDelegate().get().finalize(finalized);
+        }
+
+        return finalized;
+    }
+
+    default TaskSpec finalizeImplementation(TaskSpec taskSpec) throws SpecVisitorException {
+        return taskSpec;
+    }
+
+    default ResourceSpec finalize(ResourceSpec resourceSpec) throws SpecVisitorException {
+        ResourceSpec finalized = finalizeImplementation(resourceSpec);
+
+        if (getDelegate().isPresent()) {
+            finalized = getDelegate().get().finalize(finalized);
+        }
+
+        return finalized;
+    }
+
+    default ResourceSpec finalizeImplementation(ResourceSpec resourceSpec) throws SpecVisitorException {
+        return resourceSpec;
+    }
+
+    default VolumeSpec finalize(VolumeSpec volumeSpec) throws SpecVisitorException {
+        VolumeSpec finalized = finalizeImplementation(volumeSpec);
+
+        if (getDelegate().isPresent()) {
+            finalized = getDelegate().get().finalize(finalized);
+        }
+
+        return finalized;
+    }
+
+    default VolumeSpec finalizeImplementation(VolumeSpec volumeSpec) throws SpecVisitorException {
+        return volumeSpec;
+    }
+
+    default PortSpec finalize(PortSpec portSpec) throws SpecVisitorException {
+        PortSpec finalized = finalizeImplementation(portSpec);
+
+        if (getDelegate().isPresent()) {
+            finalized = getDelegate().get().finalize(finalized);
+        }
+
+        return finalized;
+    }
+
+    default PortSpec finalizeImplementation(PortSpec portSpec) throws SpecVisitorException {
+        return portSpec;
+    }
 
     Optional<SpecVisitor> getDelegate();
 

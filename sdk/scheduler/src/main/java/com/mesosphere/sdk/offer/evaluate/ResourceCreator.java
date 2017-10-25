@@ -9,6 +9,7 @@ public interface ResourceCreator {
     @JsonIgnore
     ResourceSpec getResourceSpec();
 
+    @JsonIgnore
     default Protos.Resource.Builder getResource() {
         ResourceSpec resourceSpec = getResourceSpec();
         Protos.Resource.Builder builder = Protos.Resource.newBuilder();

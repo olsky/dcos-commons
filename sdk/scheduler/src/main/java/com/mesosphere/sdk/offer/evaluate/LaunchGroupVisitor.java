@@ -7,6 +7,8 @@ import com.mesosphere.sdk.dcos.DcosConstants;
 import com.mesosphere.sdk.offer.CommonIdUtils;
 import com.mesosphere.sdk.offer.Constants;
 import com.mesosphere.sdk.offer.InvalidRequirementException;
+import com.mesosphere.sdk.offer.LaunchGroupOfferRecommendation;
+import com.mesosphere.sdk.offer.OfferRecommendation;
 import com.mesosphere.sdk.offer.taskdata.AuxLabelAccess;
 import com.mesosphere.sdk.offer.taskdata.EnvConstants;
 import com.mesosphere.sdk.offer.taskdata.EnvUtils;
@@ -41,34 +43,37 @@ import java.util.TreeMap;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class LaunchGroupVisitor implements SpecVisitor<List<Protos.Offer.Operation>> {
+public class LaunchGroupVisitor implements SpecVisitor<List<OfferRecommendation>> {
     private static final Logger LOGGER = LoggerFactory.getLogger(LaunchGroupVisitor.class);
 
     private static final String CONFIG_TEMPLATE_KEY_FORMAT = "CONFIG_TEMPLATE_%s";
     private static final String CONFIG_TEMPLATE_DOWNLOAD_PATH = "config-templates/";
 
     private final SpecVisitor delegate;
-    private final VisitorResultCollector<List<Protos.Offer.Operation>> collector;
+    private final VisitorResultCollector<List<OfferRecommendation>> collector;
     private final Collection<Protos.TaskInfo> taskInfos;
+    private final Protos.Offer offer;
     private final String serviceName;
     private final Protos.FrameworkID frameworkID;
     private final UUID targetConfigurationId;
     private final SchedulerFlags schedulerFlags;
 
-    private Protos.ExecutorInfo executorInfo;
     private Protos.Offer.Operation.LaunchGroup.Builder launchGroup;
     private PodInstanceRequirement podInstanceRequirement;
-    private List<Protos.Offer.Operation> operations;
+    private List<OfferRecommendation> recommendations;
     private boolean isTaskActive;
 
     public LaunchGroupVisitor(
             Collection<Protos.TaskInfo> taskInfos,
+            Protos.Offer offer,
             String serviceName,
             Protos.FrameworkID frameworkID,
             UUID targetConfigurationId,
             SchedulerFlags schedulerFlags,
             SpecVisitor delegate) {
         this.taskInfos = taskInfos;
+        LOGGER.info("BTW: {}", taskInfos.stream().map(t -> t.getName()).collect(Collectors.toList()));
+        this.offer = offer;
         this.serviceName = serviceName;
         this.frameworkID = frameworkID;
         this.targetConfigurationId = targetConfigurationId;
@@ -76,12 +81,13 @@ public class LaunchGroupVisitor implements SpecVisitor<List<Protos.Offer.Operati
         this.delegate = delegate;
         this.collector = createVisitorResultCollector();
 
-        this.operations = new ArrayList<>();
+        this.recommendations = new ArrayList<>();
         this.isTaskActive = false;
     }
 
     @Override
     public PodInstanceRequirement visitImplementation(PodInstanceRequirement podInstanceRequirement) {
+        LOGGER.info("Visiting PodInstanceRequirement {}", podInstanceRequirement);
         this.podInstanceRequirement = podInstanceRequirement;
 
         return podInstanceRequirement;
@@ -89,22 +95,25 @@ public class LaunchGroupVisitor implements SpecVisitor<List<Protos.Offer.Operati
 
     @Override
     public PodSpec visitImplementation(PodSpec podSpec) {
-        executorInfo = getExecutorInfo(podInstanceRequirement.getPodInstance().getPod());
+        LOGGER.info("Visiting PodSpec {}", podSpec);
+        launchGroup = Protos.Offer.Operation.LaunchGroup.newBuilder();
+        launchGroup.setExecutor(getExecutorInfo(podSpec));
 
         return podSpec;
     }
 
     @Override
     public TaskSpec visitImplementation(TaskSpec taskSpec) throws InvalidRequirementException {
+        LOGGER.info("Visiting TaskSpec {}", taskSpec);
         if (!podInstanceRequirement.getTasksToLaunch().contains(taskSpec.getName())) {
             return taskSpec;
         }
 
-        launchGroup = Protos.Offer.Operation.LaunchGroup.newBuilder();
         isTaskActive = true;
+        String taskName = TaskSpec.getInstanceName(podInstanceRequirement.getPodInstance(), taskSpec);
         Protos.TaskInfo.Builder taskBuilder = launchGroup.getTaskGroupBuilder().addTasksBuilder()
-                .setName(TaskSpec.getInstanceName(podInstanceRequirement.getPodInstance(), taskSpec))
-                .setTaskId(CommonIdUtils.emptyTaskId())
+                .setName(taskName)
+                .setTaskId(CommonIdUtils.toTaskId(taskName))
                 .setSlaveId(CommonIdUtils.emptyAgentId());
 
         // create default labels:
@@ -170,19 +179,21 @@ public class LaunchGroupVisitor implements SpecVisitor<List<Protos.Offer.Operati
     }
 
     @Override
-    public void finalize(TaskSpec taskSpec) {
-        if (!podInstanceRequirement.getTasksToLaunch().contains(taskSpec.getName())) {
-            return;
-        }
-
-        operations.add(
-                Protos.Offer.Operation.newBuilder()
-                        .setType(Protos.Offer.Operation.Type.LAUNCH_GROUP).setLaunchGroup(launchGroup).build());
+    public TaskSpec finalizeImplementation(TaskSpec taskSpec) {
+        recommendations.add(
+                new LaunchGroupOfferRecommendation(
+                        offer,
+                        launchGroup.getTaskGroup().getTasks(0),
+                        launchGroup.getExecutor(),
+                        podInstanceRequirement.getTasksToLaunch().contains(taskSpec.getName())));
         isTaskActive = false;
+
+        return taskSpec;
     }
 
     @Override
     public ResourceSpec visitImplementation(ResourceSpec resourceSpec) {
+        LOGGER.info("Visiting ResourceSpec {}", resourceSpec);
         Protos.Resource.Builder resource = resourceSpec.getResource();
         addResource(resource);
 
@@ -191,6 +202,7 @@ public class LaunchGroupVisitor implements SpecVisitor<List<Protos.Offer.Operati
 
     @Override
     public VolumeSpec visitImplementation(VolumeSpec volumeSpec) {
+        LOGGER.info("Visiting VolumeSpec {}", volumeSpec);
         visitImplementation((ResourceSpec) volumeSpec);
 
         if (!isTaskActive) {
@@ -215,6 +227,8 @@ public class LaunchGroupVisitor implements SpecVisitor<List<Protos.Offer.Operati
 
     @Override
     public PortSpec visitImplementation(PortSpec portSpec) {
+        LOGGER.info("Visiting PortSpec {}", portSpec);
+
         visitImplementation((ResourceSpec) portSpec);
 
         return portSpec;
@@ -227,7 +241,7 @@ public class LaunchGroupVisitor implements SpecVisitor<List<Protos.Offer.Operati
 
     @Override
     public void compileResultImplementation() {
-        getVisitorResultCollector().setResult(operations);
+        getVisitorResultCollector().setResult(recommendations);
     }
 
     @Override

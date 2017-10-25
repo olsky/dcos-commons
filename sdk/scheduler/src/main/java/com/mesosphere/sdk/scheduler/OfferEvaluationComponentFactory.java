@@ -1,7 +1,9 @@
 package com.mesosphere.sdk.scheduler;
 
 import com.mesosphere.sdk.dcos.Capabilities;
+import com.mesosphere.sdk.offer.MesosResource;
 import com.mesosphere.sdk.offer.MesosResourcePool;
+import com.mesosphere.sdk.offer.OfferRecommendation;
 import com.mesosphere.sdk.offer.evaluate.ExistingPodVisitor;
 import com.mesosphere.sdk.offer.evaluate.HierarchicalReservationCreator;
 import com.mesosphere.sdk.offer.evaluate.LaunchGroupVisitor;
@@ -60,13 +62,26 @@ public class OfferEvaluationComponentFactory {
         return new OfferConsumptionVisitor(mesosResourcePool, getReservationCreator(), delegate);
     }
 
-    public SpecVisitor<List<Protos.Offer.Operation>> getLaunchOperationVisitor(
-            Collection<Protos.TaskInfo> taskInfos, SpecVisitor delegate) {
+    public SpecVisitor<List<OfferRecommendation>> getLaunchOperationVisitor(
+            MesosResourcePool mesosResourcePool, Collection<Protos.TaskInfo> taskInfos, SpecVisitor delegate) {
         if (capabilities.supportsDefaultExecutor()) {
             return new LaunchGroupVisitor(
-                    taskInfos, serviceName, frameworkID, targetConfigurationId, schedulerFlags, delegate);
+                    taskInfos,
+                    mesosResourcePool.getOffer(),
+                    serviceName,
+                    frameworkID,
+                    targetConfigurationId,
+                    schedulerFlags,
+                    delegate);
         }
 
-        return new LaunchVisitor(taskInfos, serviceName, frameworkID, targetConfigurationId, schedulerFlags, delegate);
+        return new LaunchVisitor(
+                taskInfos,
+                mesosResourcePool.getOffer(),
+                serviceName,
+                frameworkID,
+                targetConfigurationId,
+                schedulerFlags,
+                delegate);
     }
 }

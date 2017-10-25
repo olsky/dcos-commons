@@ -69,11 +69,13 @@ public class ExistingPodVisitor implements SpecVisitor<List<OfferRecommendation>
 
     @Override
     public PodInstanceRequirement visitImplementation(PodInstanceRequirement podInstanceRequirement) {
+        LOGGER.info("Visiting PodInstanceRequirement {}", podInstanceRequirement);
         return podInstanceRequirement;
     }
 
     @Override
     public PodSpec visitImplementation(PodSpec podSpec) {
+        LOGGER.info("Visiting PodSpec {}", podSpec);
         executorInfo = getExecutorInfo(taskInfos.values(), podSpec);
         setActiveExecutor(executorInfo);
 
@@ -81,171 +83,179 @@ public class ExistingPodVisitor implements SpecVisitor<List<OfferRecommendation>
     }
 
     @Override
-    public void finalize(PodSpec podSpec) {
+    public PodSpec finalizeImplementation(PodSpec podSpec) {
         for (Protos.Resource resource : executorInfo.getResourcesList()) {
             mesosResourcePool.free(new MesosResource(resource));
             unreserves.add(new UnreserveOfferRecommendation(mesosResourcePool.getOffer(), resource));
         }
+
+        return podSpec;
     }
 
     @Override
     public TaskSpec visitImplementation(TaskSpec taskSpec) {
-        setActiveTask(taskInfos.get(taskSpec.getName()));
+        LOGGER.info("Visiting TaskSpec {}", taskSpec);
+        Protos.TaskInfo taskInfo = taskInfos.get(taskSpec.getName());
+        if (taskInfo != null) {
+            setActiveTask(taskInfo);
+        }
 
         return taskSpec;
     }
 
     @Override
-    public void finalize(TaskSpec taskSpec) {
-        for (Protos.Resource resource : activeTask.getResourcesList()) {
-            mesosResourcePool.free(new MesosResource(resource));
-            unreserves.add(new UnreserveOfferRecommendation(mesosResourcePool.getOffer(), resource));
+    public TaskSpec finalizeImplementation(TaskSpec taskSpec) {
+        if (isTaskActive()) {
+            for (Protos.Resource resource : activeTask.getResourcesList()) {
+                mesosResourcePool.free(new MesosResource(resource));
+                unreserves.add(new UnreserveOfferRecommendation(mesosResourcePool.getOffer(), resource));
+            }
         }
         setActiveExecutor(executorInfo);
+
+        return taskSpec;
     }
 
     @Override
     public ResourceSpec visitImplementation(ResourceSpec resourceSpec) {
+        LOGGER.info("Visiting ResourceSpec {}", resourceSpec);
         Optional<Protos.Resource> matchingResource = getMatchingResource(resourceSpec);
-        ResourceSpec matchedResourceSpec;
+        Optional<String> resourceId = matchingResource.isPresent() ?
+                ResourceUtils.getResourceId(matchingResource.get()) : Optional.empty();
 
-        if (matchingResource.isPresent()) {
-            Optional<String> resourceId = ResourceUtils.getResourceId(matchingResource.get());
-            matchedResourceSpec = new ResourceSpec() {
-                @Override
-                public Protos.Value getValue() {
-                    return resourceSpec.getValue();
-                }
+        ResourceSpec matchedResourceSpec = new ResourceSpec() {
+            @Override
+            public Protos.Value getValue() {
+                                         return resourceSpec.getValue();
+                                                                        }
 
-                @Override
-                public String getName() {
-                    return resourceSpec.getName();
-                }
+            @Override
+            public String getName() {
+                                  return resourceSpec.getName();
+                                                                }
 
-                @Override
-                public String getRole() {
-                    return resourceSpec.getRole();
-                }
+            @Override
+            public String getRole() {
+                                  return resourceSpec.getRole();
+                                                                }
 
-                @Override
-                public String getPreReservedRole() {
-                    return resourceSpec.getPreReservedRole();
-                }
+            @Override
+            public String getPreReservedRole() {
+                                             return resourceSpec.getPreReservedRole();
+                                                                                      }
 
-                @Override
-                public String getPrincipal() {
-                    return resourceSpec.getPrincipal();
-                }
+            @Override
+            public String getPrincipal() {
+                                       return resourceSpec.getPrincipal();
+                                                                          }
 
-                @Override
-                public ResourceSpec getResourceSpec() {
-                    return this;
-                }
+            @Override
+            public ResourceSpec getResourceSpec() {
+                                                return this;
+                                                            }
 
-                @Override
-                public Protos.Resource.Builder getResource() {
-                    return reservationCreator.withReservation(resourceSpec, resourceId);
-                }
-            };
-        } else {
-            matchedResourceSpec = resourceSpec;
-        }
+            @Override
+            public Protos.Resource.Builder getResource() {
+                return reservationCreator.withReservation(resourceSpec, resourceId);
+            }
+        };
 
         return matchedResourceSpec;
     }
 
     @Override
     public VolumeSpec visitImplementation(VolumeSpec volumeSpec) {
+        LOGGER.info("Visiting VolumeSpec {}", volumeSpec);
         Optional<Protos.Resource> matchingResource = getMatchingResource(volumeSpec);
         VolumeSpec matchedVolumeSpec;
 
-        if (matchingResource.isPresent()) {
-            Optional<String> persistenceId = ResourceUtils.getPersistenceId(matchingResource.get());
-            matchedVolumeSpec = new VolumeSpec() {
-                @Override
-                public Type getType() {
-                    return volumeSpec.getType();
-                }
+        Optional<String> persistenceId = matchingResource.isPresent() ?
+                ResourceUtils.getPersistenceId(matchingResource.get()) : Optional.empty();
+        Optional<String> resourceId = matchingResource.isPresent() ?
+                ResourceUtils.getResourceId(matchingResource.get()) : Optional.empty();
+        matchedVolumeSpec = new VolumeSpec() {
+            @Override
+            public Type getType() {
+                                return volumeSpec.getType();
+                                                            }
 
-                @Override
-                public String getContainerPath() {
-                    return volumeSpec.getContainerPath();
-                }
+            @Override
+            public String getContainerPath() {
+                                           return volumeSpec.getContainerPath();
+                                                                                }
 
-                @Override
-                public VolumeSpec getVolumeSpec() {
-                    return volumeSpec.getVolumeSpec();
-                }
+            @Override
+            public VolumeSpec getVolumeSpec() {
+                                            return volumeSpec.getVolumeSpec();
+                                                                              }
 
-                @Override
-                public Protos.Value getValue() {
-                    return volumeSpec.getValue();
-                }
+            @Override
+            public Protos.Value getValue() {
+                                         return volumeSpec.getValue();
+                                                                      }
 
-                @Override
-                public String getName() {
-                    return volumeSpec.getName();
-                }
+            @Override
+            public String getName() {
+                                  return volumeSpec.getName();
+                                                              }
 
-                @Override
-                public String getRole() {
-                    return volumeSpec.getRole();
-                }
+            @Override
+            public String getRole() {
+                                  return volumeSpec.getRole();
+                                                              }
 
-                @Override
-                public String getPreReservedRole() {
-                    return volumeSpec.getPreReservedRole();
-                }
+            @Override
+            public String getPreReservedRole() {
+                                             return volumeSpec.getPreReservedRole();
+                                                                                    }
 
-                @Override
-                public String getPrincipal() {
-                    return volumeSpec.getPrincipal();
-                }
+            @Override
+            public String getPrincipal() {
+                                       return volumeSpec.getPrincipal();
+                                                                        }
 
-                @Override
-                public ResourceSpec getResourceSpec() {
-                    return this;
-                }
+            @Override
+            public ResourceSpec getResourceSpec() {
+                                                return this;
+                                                            }
 
-                @Override
-                public Protos.Resource.Builder getResource() {
-                    Protos.Resource.Builder resourceBuilder = volumeSpec.getResource();
+            @Override
+            public Protos.Resource.Builder getResource() {
+                Protos.Resource.Builder resourceBuilder = volumeSpec.getResource();
 
-                    if (volumeSpec.getContainerPath() != null) {
-                        Protos.Resource.DiskInfo.Builder diskBuilder = resourceBuilder.getDiskBuilder();
-                        diskBuilder.getVolumeBuilder()
-                                .setContainerPath(volumeSpec.getContainerPath())
-                                .setMode(Protos.Volume.Mode.RW);
-                        diskBuilder.getPersistenceBuilder()
-                                .setPrincipal(volumeSpec.getPrincipal())
-                                .setId(persistenceId.isPresent() ? persistenceId.get() : UUID.randomUUID().toString());
+                if (volumeSpec.getContainerPath() != null) {
+                    Protos.Resource.DiskInfo.Builder diskBuilder = resourceBuilder.getDiskBuilder();
+                    diskBuilder.getVolumeBuilder()
+                            .setContainerPath(volumeSpec.getContainerPath())
+                            .setMode(Protos.Volume.Mode.RW);
+                    diskBuilder.getPersistenceBuilder()
+                            .setPrincipal(volumeSpec.getPrincipal())
+                            .setId(persistenceId.isPresent() ? persistenceId.get() : UUID.randomUUID().toString());
 
-                        if (volumeSpec.getType().equals(Type.MOUNT)) {
-                            Optional<String> sourceRoot = ResourceUtils.getSourceRoot(resourceBuilder.build());
-                            if (!sourceRoot.isPresent()) {
-                                throw new IllegalStateException("Source path must be set on MOUNT volumes.");
-                            }
-
-                            Protos.Resource.DiskInfo.Source.Builder sourceBuilder = Protos.Resource.DiskInfo.Source
-                                    .newBuilder()
-                                    .setType(Protos.Resource.DiskInfo.Source.Type.MOUNT);
-                            sourceBuilder.getMountBuilder().setRoot(sourceRoot.get());
-                            diskBuilder.setSource(sourceBuilder);
+                    if (volumeSpec.getType().equals(Type.MOUNT)) {
+                        Optional<String> sourceRoot = ResourceUtils.getSourceRoot(resourceBuilder.build());
+                        if (!sourceRoot.isPresent()) {
+                            throw new IllegalStateException("Source path must be set on MOUNT volumes.");
                         }
-                    }
 
-                    return resourceBuilder;
+                        Protos.Resource.DiskInfo.Source.Builder sourceBuilder = Protos.Resource.DiskInfo.Source
+                                .newBuilder()
+                                .setType(Protos.Resource.DiskInfo.Source.Type.MOUNT);
+                        sourceBuilder.getMountBuilder().setRoot(sourceRoot.get());
+                        diskBuilder.setSource(sourceBuilder);
+                    }
                 }
-            };
-        } else {
-            matchedVolumeSpec = volumeSpec;
-        }
+
+                return reservationCreator.withReservation(volumeSpec, resourceBuilder, resourceId);
+            }
+        };
 
         return matchedVolumeSpec;
     }
 
     @Override
     public PortSpec visitImplementation(PortSpec portSpec) {
+        LOGGER.info("Visiting PortSpec {}", portSpec);
         PortSpec matchedPortSpec;
 
         if (isTaskActive()) {

@@ -59,22 +59,26 @@ public class OfferConsumptionVisitor implements SpecVisitor<List<EvaluationOutco
 
     @Override
     public PodInstanceRequirement visitImplementation(PodInstanceRequirement podInstanceRequirement) {
+        LOGGER.info("Visiting PodInstanceRequirement {}", podInstanceRequirement);
         return podInstanceRequirement;
     }
 
     @Override
     public PodSpec visitImplementation(PodSpec podSpec) {
+        LOGGER.info("Visiting PodSpec {}", podSpec);
         this.currentPodSpec = podSpec;
         return podSpec;
     }
 
     @Override
     public TaskSpec visitImplementation(TaskSpec taskSpec) {
+        LOGGER.info("Visiting TaskSpec {}", taskSpec);
         return taskSpec;
     }
 
     @Override
     public ResourceSpec visitImplementation(ResourceSpec resourceSpec) {
+        LOGGER.info("Visiting ResourceSpec {}", resourceSpec);
         Optional<String> resourceId = ResourceUtils.getResourceId(resourceSpec.getResource().build());
         Optional<MesosResource> mesosResourceOptional = consume(resourceSpec, resourceId, mesosResourcePool);
         if (!mesosResourceOptional.isPresent()) {
@@ -184,6 +188,7 @@ public class OfferConsumptionVisitor implements SpecVisitor<List<EvaluationOutco
 
     @Override
     public VolumeSpec visitImplementation(VolumeSpec volumeSpec) {
+        LOGGER.info("Visiting VolumeSpec {}", volumeSpec);
         Optional<String> resourceId = ResourceUtils.getResourceId(volumeSpec.getResource().build());
         String detailsClause = resourceId.isPresent() ? "previously reserved " : "";
         String message;
@@ -224,6 +229,7 @@ public class OfferConsumptionVisitor implements SpecVisitor<List<EvaluationOutco
 
     @Override
     public PortSpec visitImplementation(PortSpec portSpec) {
+        LOGGER.info("Visiting PortSpec {}", portSpec);
         Long assignedPort = portSpec.getPort();
         if (assignedPort == 0) {
             assignedPort = mesosResourcePool.getUnassignedPort(currentPodSpec);

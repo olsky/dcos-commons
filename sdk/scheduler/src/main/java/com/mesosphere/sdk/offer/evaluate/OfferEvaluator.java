@@ -3,6 +3,7 @@ package com.mesosphere.sdk.offer.evaluate;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import com.google.protobuf.TextFormat;
+import com.mesosphere.sdk.dcos.Capabilities;
 import com.mesosphere.sdk.offer.*;
 import com.mesosphere.sdk.offer.evaluate.placement.OfferConsumptionVisitor;
 import com.mesosphere.sdk.offer.taskdata.TaskLabelReader;
@@ -40,7 +41,8 @@ public class OfferEvaluator {
     private final UUID targetConfigId;
     private final SchedulerFlags schedulerFlags;
     private final boolean useDefaultExecutor;
-    private final OfferEvaluationComponentFactory offerEvaluationComponentFactory;
+    private Capabilities capabilities;
+    private OfferEvaluationComponentFactory offerEvaluationComponentFactory;
 
     @Inject
     public OfferEvaluator(
@@ -49,17 +51,25 @@ public class OfferEvaluator {
             UUID targetConfigId,
             SchedulerFlags schedulerFlags,
             boolean useDefaultExecutor,
-            OfferEvaluationComponentFactory offerEvaluationComponentFactory) {
+            Capabilities capabilities) {
         this.stateStore = stateStore;
         this.serviceName = serviceName;
         this.targetConfigId = targetConfigId;
         this.schedulerFlags = schedulerFlags;
         this.useDefaultExecutor = useDefaultExecutor;
-        this.offerEvaluationComponentFactory = offerEvaluationComponentFactory;
+        this.capabilities = capabilities;
     }
 
-    public void evaluate2(
-            PodInstanceRequirement podInstanceRequirement, List<Protos.Offer> offers) throws SpecVisitorException {
+    private OfferEvaluationComponentFactory getOfferEvaluationComponentFactory() {
+        if (offerEvaluationComponentFactory == null) {
+            offerEvaluationComponentFactory = new OfferEvaluationComponentFactory(
+                    capabilities, serviceName, stateStore.fetchFrameworkId().get(), targetConfigId, schedulerFlags);
+        }
+
+        return offerEvaluationComponentFactory;
+    }
+
+    public List<OfferRecommendation> evaluate2(PodInstanceRequirement podInstanceRequirement, List<Protos.Offer> offers) throws SpecVisitorException {
         Map<String, Protos.TaskInfo> allTasks = stateStore.fetchTasks().stream()
                 .collect(Collectors.toMap(Protos.TaskInfo::getName, Function.identity()));
         List<Protos.TaskInfo> thisPodTasks =
@@ -70,13 +80,15 @@ public class OfferEvaluator {
         logger.info("Pod: {}, taskInfos for evaluation.", podInstanceRequirement.getPodInstance().getName());
         thisPodTasks.forEach(info -> logger.info(TextFormat.shortDebugString(info)));
 
-        for (Protos.Offer offer : offers) {
+        OfferEvaluationComponentFactory offerEvaluationComponentFactory = getOfferEvaluationComponentFactory();
+        for (int i = 0; i < offers.size(); ++i) {
+            Protos.Offer offer = offers.get(i);
             MesosResourcePool resourcePool = new MesosResourcePool(
                     offer,
                     OfferEvaluationUtils.getRole(podInstanceRequirement.getPodInstance().getPod()));
 
-            SpecVisitor<List<Protos.Offer.Operation>> launchOperationVisitor =
-                    offerEvaluationComponentFactory.getLaunchOperationVisitor(thisPodTasks, null);
+            SpecVisitor<List<OfferRecommendation>> launchOperationVisitor =
+                    offerEvaluationComponentFactory.getLaunchOperationVisitor(resourcePool, thisPodTasks, null);
             OfferConsumptionVisitor offerConsumptionVisitor =
                     offerEvaluationComponentFactory.getOfferConsumptionVisitor(resourcePool, launchOperationVisitor);
             ExistingPodVisitor existingPodVisitor = offerEvaluationComponentFactory.getExistingPodVisitor(
@@ -86,12 +98,46 @@ public class OfferEvaluator {
                     existingPodVisitor.getVisitorResultCollector();
             VisitorResultCollector<List<EvaluationOutcome>> evaluationOutcomeCollector =
                     offerConsumptionVisitor.getVisitorResultCollector();
-            VisitorResultCollector<List<Protos.Offer.Operation>> launchCollector =
+            VisitorResultCollector<List<OfferRecommendation>> launchCollector =
                     launchOperationVisitor.getVisitorResultCollector();
 
-            existingPodVisitor.visit(podInstanceRequirement);
+            podInstanceRequirement.accept(existingPodVisitor);
             existingPodVisitor.compileResult();
+
+            int failedOutcomeCount = 0;
+            StringBuilder outcomeDetails = new StringBuilder();
+            for (EvaluationOutcome outcome : evaluationOutcomeCollector.getResult()) {
+                if (!outcome.isPassing()) {
+                    ++failedOutcomeCount;
+                }
+                logOutcome(outcomeDetails, outcome, "");
+            }
+            if (outcomeDetails.length() != 0) {
+                // trim extra trailing newline:
+                outcomeDetails.deleteCharAt(outcomeDetails.length() - 1);
+            }
+
+            if (failedOutcomeCount != 0) {
+                logger.info("Offer {}, {}: failed {} of {} evaluation stages:\n{}",
+                        i + 1,
+                        offer.getId().getValue(),
+                        failedOutcomeCount,
+                        evaluationOutcomeCollector.getResult().size(),
+                        outcomeDetails.toString());
+            } else {
+                List<OfferRecommendation> recommendations = evaluationOutcomeCollector.getResult().stream()
+                        .map(outcome -> outcome.getOfferRecommendations())
+                        .flatMap(xs -> xs.stream())
+                        .collect(Collectors.toList());
+                recommendations.addAll(launchCollector.getResult());
+                logger.info("Offer {}: passed all {} evaluation stages, returning {} recommendations:\n{}",
+                        i + 1, evaluationOutcomeCollector.getResult().size(), recommendations.size(), outcomeDetails.toString());
+
+                return recommendations;
+            }
         }
+
+        return Collections.emptyList();
     }
 
     public List<OfferRecommendation> evaluate(PodInstanceRequirement podInstanceRequirement, List<Protos.Offer> offers)

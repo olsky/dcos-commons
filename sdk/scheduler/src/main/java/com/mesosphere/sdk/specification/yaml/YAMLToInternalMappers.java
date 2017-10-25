@@ -613,7 +613,7 @@ public class YAMLToInternalMappers {
                         role,
                         preReservedRole,
                         principal,
-                        Optional.ofNullable(rawPort.getEnvKey()),
+                        rawPort.getEnvKey(),
                         name,
                         visibility,
                         networkNames));
