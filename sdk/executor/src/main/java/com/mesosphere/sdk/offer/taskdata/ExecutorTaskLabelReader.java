@@ -27,7 +27,7 @@ public class ExecutorTaskLabelReader {
     }
 
     /**
-     * Returns the Task's {@link GoalState}, e.g. RUNNING or FINISHED.
+     * Returns the Task's {@link GoalState}, e.g. RUNNING, FINISH or ONCE.
      */
     public GoalState getGoalState() throws TaskException {
         String goalStateString = reader.getOrThrow(LabelConstants.GOAL_STATE_LABEL);
